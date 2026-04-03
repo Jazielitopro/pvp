@@ -1,0 +1,101 @@
+# Starter Prompt — Parryhook Build Sessions
+
+Use this prompt at the start of each new build session to give Claude full context.
+
+---
+
+## Prompt Template
+
+```
+We are building a competitive PvP arena shooter in Roblox Studio using Luau.
+
+## Game Identity
+- First-person, skill-based, high mechanical ceiling
+- Inspired by Ultrakill pacing, adapted for multiplayer
+- NOT casual — precision and movement mastery are the core skill expression
+
+## Core Design Decisions
+- Projectile-based weapons (no hitscan) — bullets have travel time and require prediction
+- Revolver: 6 bullets, 3 hits to kill, manual reload, no spread
+- Passive health regen after delay — encourages disengage and repositioning
+- Dash: no invulnerability frames, cooldown-based, repositioning tool only
+- Grapple: attaches to environment only (MVP)
+- Parry: deflects/reflects projectiles on precise timing — high risk, high reward
+- Perks: all have trade-offs, no dominant strategy allowed
+- Progression: cosmetic only, never affects gameplay stats
+
+## Architecture Principles
+- Server is authoritative — no client-side damage, ammo, or hit validation
+- Client runs ahead visually for responsiveness; server corrects on conflict
+- All systems are modular — gameplay logic, visual feedback, and network logic are separated
+- Avoid exploit-prone patterns
+
+## Projectile System Modules (designed)
+- ProjectileRegistry — server, source of truth for all active projectiles
+- ProjectileSpawner — validates fire requests, registers projectiles
+- ProjectileSimulator — server (authoritative) + client (visual only)
+- CollisionHandler — server, routes hits to damage or parry
+- DamageApplicator — server only, applies chunk damage
+- ParryHandler — server validation + client input detection
+- FeedbackDispatcher — server to client signals for VFX/SFX
+
+## Key Decisions Made
+- Lag compensation: YES — server rewinds target position to client fire timestamp, capped at ~150ms
+- Parry timing: server checks projectile proximity at time of input (Option B), with small forgiveness buffer
+
+## Current Phase
+[FILL IN: e.g., "Phase 1 — Movement Prototype, Step 2: Dash implementation"]
+
+## Current Task
+[FILL IN: e.g., "Implement the dash mechanic — no iframes, server-side cooldown, cooldown duration TBD"]
+
+## Constraints for This Session
+- Build only what is needed for the current step
+- Do not add features beyond the current phase
+- Flag any edge case or risk you identify before writing code
+- Ask before making architectural decisions not covered above
+```
+
+---
+
+## How to Use This
+
+1. Copy the prompt above
+2. Fill in **Current Phase** and **Current Task** from `build-plan.md.txt`
+3. Paste at the start of a new Claude session
+4. Claude will have full context and build only what is needed
+
+---
+
+## Phase Tracker
+
+Update this as each step is completed.
+
+| Phase | Step | Status |
+|---|---|---|
+| 1 — Movement | 1. Basic character controller | pending |
+| 1 — Movement | 2. Dash | pending |
+| 1 — Movement | 3. Slide | pending |
+| 1 — Movement | 4. First-person camera | pending |
+| 1 — Movement | 5. Validate hit registration at speed | pending |
+| 1 — Movement | 6. Validate readability to other players | pending |
+| 2 — Combat | 1. Server-side ammo counter | pending |
+| 2 — Combat | 2. Fire request pipeline | pending |
+| 2 — Combat | 3. Revolver stats | pending |
+| 2 — Combat | 4. Chunk damage model | pending |
+| 2 — Combat | 5. Health + regen | pending |
+| 2 — Combat | 6. Hit feedback | pending |
+| 2 — Combat | 7. Kill confirmation | pending |
+| 3 — Projectile | 3.1 ProjectileRegistry | pending |
+| 3 — Projectile | 3.2 ProjectileSpawner | pending |
+| 3 — Projectile | 3.3 ProjectileSimulator (server) | pending |
+| 3 — Projectile | 3.4 ProjectileSimulator (client) | pending |
+| 3 — Projectile | 3.5 CollisionHandler | pending |
+| 3 — Projectile | 3.6 DamageApplicator | pending |
+| 3 — Projectile | 3.7 FeedbackDispatcher | pending |
+| 3 — Projectile | 3.8 Edge case hardening | pending |
+| 4 — Grapple | All steps | pending |
+| 5 — Parry | All steps | pending |
+| 6 — Match System | All steps | pending |
+| 7 — Perks | All steps | pending |
+| 8 — Progression + UI | All steps | pending |
