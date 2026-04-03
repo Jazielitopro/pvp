@@ -13,6 +13,7 @@ local PhysicsApplier    = require(script.PhysicsApplier)
 local DashHandler       = require(script.DashHandler)
 local SlideHandler      = require(script.SlideHandler)
 local CameraController  = require(script.CameraController)
+local AnimationHandler  = require(script.AnimationHandler)
 local Constants         = require(game.ReplicatedStorage.Shared.Constants.MovementConstants)
 
 local player  = Players.LocalPlayer
@@ -43,6 +44,7 @@ task.spawn(function()
 end)
 local slideHandler      = SlideHandler.new()
 local cameraController  = CameraController.new(camera, humanoid)
+local animationHandler  = AnimationHandler.new(humanoid)
 
 -- Start camera — passes a getter so CameraController always reads the latest state
 cameraController:start(function()
@@ -130,6 +132,7 @@ local heartbeat = RunService.Heartbeat:Connect(function(dt)
 	local horizontal      = MovementResolver.resolve(state, input, currentVelocity, dt)
 
 	physicsApplier:applyVelocity(horizontal)
+	animationHandler:update(state)
 
 	-- Align body to camera every frame (first-person standard)
 	alignToCamera()
@@ -162,4 +165,5 @@ player.CharacterRemoving:Connect(function()
 	heartbeat:Disconnect()
 	physicsApplier:destroy()
 	cameraController:stop()
+	animationHandler:destroy()
 end)

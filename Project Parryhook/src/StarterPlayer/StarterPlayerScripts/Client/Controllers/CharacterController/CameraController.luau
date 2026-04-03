@@ -1,9 +1,10 @@
 -- CameraController
--- Manages first-person lock, movement head bob, and FOV transitions.
+-- Manages first-person lock, movement head bob, FOV transitions,
+-- and state-based camera lean offsets (dash/slide).
 -- Runs on RenderStepped (before rendering) for smooth visual output.
 --
--- Bob uses Humanoid.CameraOffset — Roblox applies this in camera-local space
--- automatically, so it integrates cleanly with mouse look.
+-- Bob + lean use Humanoid.CameraOffset — Roblox applies this in camera-local
+-- space automatically, integrates cleanly with mouse look.
 -- FOV changes via camera.FieldOfView lerped per state.
 
 local RunService = game:GetService("RunService")
@@ -23,6 +24,12 @@ local FOV_TARGETS = {
 	dashing   = Constants.FOV_DASH,
 }
 
+-- Camera lean (Z offset) per state. Unlisted states use 0.
+local LEAN_TARGETS = {
+	dashing = Constants.LEAN_DASH_Z,
+	sliding = Constants.LEAN_SLIDE_Z,
+}
+
 local CameraController = {}
 CameraController.__index = CameraController
 
@@ -33,12 +40,13 @@ function CameraController.new(camera, humanoid)
 	Players.LocalPlayer.CameraMode = Enum.CameraMode.LockFirstPerson
 
 	return setmetatable({
-		_camera    = camera,
-		_humanoid  = humanoid,
-		_bobTime   = 0,
-		_bobAmp    = 0,  -- current smoothed amplitude
-		_bobFreq   = Constants.BOB_WALK_FREQUENCY,
+		_camera     = camera,
+		_humanoid   = humanoid,
+		_bobTime    = 0,
+		_bobAmp     = 0,
+		_bobFreq    = Constants.BOB_WALK_FREQUENCY,
 		_currentFOV = Constants.FOV_NORMAL,
+		_currentLeanZ = 0,  -- current smoothed forward lean offset
 		_connection = nil,
 	}, CameraController)
 end
@@ -71,7 +79,13 @@ function CameraController:_update(state, dt)
 	local bobY = math.sin(self._bobTime)       * self._bobAmp
 	local bobX = math.sin(self._bobTime * 0.5) * self._bobAmp * 0.3
 
-	self._humanoid.CameraOffset = Vector3.new(bobX, bobY, 0)
+	-- ── Camera lean ────────────────────────────────────────────────────────
+	local targetLeanZ = LEAN_TARGETS[state] or 0
+	local leanAlpha   = math.min(Constants.LEAN_LERP_SPEED * dt, 1)
+	self._currentLeanZ = self._currentLeanZ + (targetLeanZ - self._currentLeanZ) * leanAlpha
+
+	-- Combine bob + lean into CameraOffset
+	self._humanoid.CameraOffset = Vector3.new(bobX, bobY, self._currentLeanZ)
 
 	-- ── Field of view ──────────────────────────────────────────────────────
 	local targetFOV = FOV_TARGETS[state] or Constants.FOV_NORMAL
@@ -86,8 +100,9 @@ function CameraController:stop()
 		self._connection:Disconnect()
 		self._connection = nil
 	end
-	-- Reset camera offset so it does not persist across respawns
+	-- Reset offset and lean so they do not persist across respawns
 	self._humanoid.CameraOffset = Vector3.zero
+	self._currentLeanZ = 0
 	self._camera.FieldOfView    = Constants.FOV_NORMAL
 end
 
