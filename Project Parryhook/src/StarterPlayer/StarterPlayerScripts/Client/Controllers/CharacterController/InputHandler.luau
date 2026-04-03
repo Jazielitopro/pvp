@@ -28,7 +28,9 @@ function InputHandler.getMoveDirection(camera)
 		camera.CFrame.LookVector.Z
 	).Unit
 
-	local right = Vector3.new(lookFlat.Z, 0, -lookFlat.X)
+	-- right = lookFlat rotated 90° clockwise on XZ plane
+	-- Fix: was (lookFlat.Z, 0, -lookFlat.X) which pointed LEFT — sign was inverted
+	local right = Vector3.new(-lookFlat.Z, 0, lookFlat.X)
 
 	return (lookFlat * -moveZ + right * moveX).Unit
 end
