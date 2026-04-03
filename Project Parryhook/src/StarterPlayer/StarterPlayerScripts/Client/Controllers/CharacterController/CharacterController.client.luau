@@ -23,14 +23,13 @@ local character  = player.Character or player.CharacterAdded:Wait()
 local humanoid   = character:WaitForChild("Humanoid")
 local rootPart   = character:WaitForChild("HumanoidRootPart")
 
--- Disable Roblox's default movement so our controller takes over
-humanoid.WalkSpeed  = 0
+-- Disable auto-rotation and jump — PhysicsApplier manages both dynamically
 humanoid.JumpPower  = 0
 humanoid.AutoRotate = false
 
 -- Initialize modules — movement starts immediately, no blocking calls
 local stateManager      = StateManager.new()
-local physicsApplier    = PhysicsApplier.new(rootPart)
+local physicsApplier    = PhysicsApplier.new(rootPart, humanoid)
 local dashHandler       = DashHandler.new(physicsApplier, nil) -- remote set async below
 
 -- Connect dash remote asynchronously so it never blocks movement startup
@@ -147,12 +146,10 @@ local heartbeat = RunService.Heartbeat:Connect(function(dt)
 
 	-- Jump: only when grounded, buffered input, and not on cooldown
 	if jumpBuffered and grounded and not jumpCooldown then
-		-- Exit Humanoid grounded state first — otherwise JumpPower=0 clamps Y velocity
-		humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-		physicsApplier:applyJump()
+		physicsApplier:applyJump() -- sets JumpPower + ChangeState internally
 		jumpBuffered = false
 		jumpCooldown = true
-		task.delay(0.2, function()
+		task.delay(0.3, function()
 			jumpCooldown = false
 		end)
 	end

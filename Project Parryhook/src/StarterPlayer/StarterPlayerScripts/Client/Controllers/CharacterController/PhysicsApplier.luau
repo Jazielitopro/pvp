@@ -1,54 +1,49 @@
 -- PhysicsApplier
--- Owns the LinearVelocity constraint and applies horizontal movement.
--- Y axis MaxForce is 0 so gravity acts naturally.
--- Jump is applied as a direct velocity impulse on AssemblyLinearVelocity.
+-- Drives character movement using humanoid:Move() + dynamic WalkSpeed.
+-- This works WITH Roblox's Humanoid physics instead of fighting it.
+-- LinearVelocity was removed — it competed with Humanoid friction/damping.
+--
+-- Jump:  temporarily sets JumpPower, fires ChangeState(Jumping), resets.
+-- Dash:  sets AssemblyLinearVelocity burst + WalkSpeed for sustained speed.
 
 local Constants = require(game.ReplicatedStorage.Shared.Constants.MovementConstants)
 
 local PhysicsApplier = {}
 PhysicsApplier.__index = PhysicsApplier
 
-function PhysicsApplier.new(rootPart)
-	-- Use RootRigAttachment if it exists (R15 default).
-	-- If not (R6 or custom rig), create one at the root center.
-	local attachment = rootPart:FindFirstChild("RootRigAttachment")
-	if not attachment then
-		attachment = Instance.new("Attachment")
-		attachment.Name     = "RootRigAttachment"
-		attachment.Position = Vector3.zero
-		attachment.Parent   = rootPart
-	end
-
-	local lv = Instance.new("LinearVelocity")
-	lv.Attachment0           = attachment
-	lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
-	lv.MaxForce              = Vector3.new(1e5, 0, 1e5) -- Y=0: gravity is untouched
-	lv.VectorVelocity        = Vector3.zero
-	lv.Parent                = rootPart
-
+function PhysicsApplier.new(rootPart, humanoid)
 	return setmetatable({
-		_lv   = lv,
-		_root = rootPart,
+		_root     = rootPart,
+		_humanoid = humanoid,
 	}, PhysicsApplier)
 end
 
--- Set target horizontal velocity this frame.
+-- Called every frame. Extracts speed and direction from the velocity vector,
+-- sets WalkSpeed, and drives direction with humanoid:Move().
 function PhysicsApplier:applyVelocity(horizontalVelocity)
-	self._lv.VectorVelocity = horizontalVelocity
+	local speed = horizontalVelocity.Magnitude
+
+	self._humanoid.WalkSpeed = speed
+
+	if speed > 0.1 then
+		self._humanoid:Move(horizontalVelocity.Unit, false) -- false = world space
+	else
+		self._humanoid:Move(Vector3.zero, false)
+	end
 end
 
--- Apply vertical jump impulse while preserving current horizontal velocity.
+-- Jump: set JumpPower temporarily so the Humanoid fires the jump,
+-- then reset to 0 so we remain in full control.
 function PhysicsApplier:applyJump()
-	local current = self._root.AssemblyLinearVelocity
-	self._root.AssemblyLinearVelocity = Vector3.new(
-		current.X,
-		Constants.JUMP_FORCE,
-		current.Z
-	)
+	self._humanoid.JumpPower = Constants.JUMP_FORCE
+	self._humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+	task.delay(0.05, function()
+		self._humanoid.JumpPower = 0
+	end)
 end
 
--- Apply horizontal dash burst while preserving current vertical velocity.
--- Direction must be a unit Vector3 on the XZ plane.
+-- Dash: direct AssemblyLinearVelocity burst for the instant impulse feel.
+-- WalkSpeed is also set to DASH_SPEED via applyVelocity during DASHING state.
 function PhysicsApplier:applyDash(direction)
 	local current = self._root.AssemblyLinearVelocity
 	self._root.AssemblyLinearVelocity = Vector3.new(
@@ -59,7 +54,7 @@ function PhysicsApplier:applyDash(direction)
 end
 
 function PhysicsApplier:destroy()
-	self._lv:Destroy()
+	-- No constraints to destroy in this implementation
 end
 
 return PhysicsApplier
