@@ -67,11 +67,12 @@ local function checkGrounded()
 	return result ~= nil
 end
 
--- Smoothly rotate character toward movement direction
-local function faceMovementDirection(moveDirection)
-	if moveDirection.Magnitude == 0 then return end
-	local target = CFrame.lookAt(rootPart.Position, rootPart.Position + moveDirection)
-	rootPart.CFrame = rootPart.CFrame:Lerp(target, 0.25)
+-- Align character Y rotation to camera yaw.
+-- Only modifies rotation, NEVER position — prevents physics drift.
+-- In first-person: body always faces where the camera looks.
+local function alignToCamera()
+	local yaw = math.atan2(-camera.CFrame.LookVector.X, -camera.CFrame.LookVector.Z)
+	rootPart.CFrame = CFrame.new(rootPart.Position) * CFrame.fromEulerAnglesYXZ(0, yaw, 0)
 end
 
 -- Input events: jump, dash, slide — all handled once per press
@@ -130,12 +131,8 @@ local heartbeat = RunService.Heartbeat:Connect(function(dt)
 
 	physicsApplier:applyVelocity(horizontal)
 
-	-- During slide: face the locked slide direction, not live input
-	if state == "sliding" then
-		faceMovementDirection(input.slideDirection)
-	else
-		faceMovementDirection(input.moveDirection)
-	end
+	-- Align body to camera every frame (first-person standard)
+	alignToCamera()
 
 	-- Crouch effect: lower HipHeight while sliding, restore otherwise
 	if state == "sliding" then
