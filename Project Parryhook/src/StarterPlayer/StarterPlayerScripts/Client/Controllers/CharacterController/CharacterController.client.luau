@@ -6,11 +6,12 @@ local RunService      = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Players         = game:GetService("Players")
 
-local InputHandler    = require(script.InputHandler)
-local StateManager    = require(script.StateManager)
+local InputHandler     = require(script.InputHandler)
+local StateManager     = require(script.StateManager)
 local MovementResolver = require(script.MovementResolver)
-local PhysicsApplier  = require(script.PhysicsApplier)
-local Constants       = require(game.ReplicatedStorage.Shared.Constants.MovementConstants)
+local PhysicsApplier   = require(script.PhysicsApplier)
+local DashHandler      = require(script.DashHandler)
+local Constants        = require(game.ReplicatedStorage.Shared.Constants.MovementConstants)
 
 local player  = Players.LocalPlayer
 local camera  = workspace.CurrentCamera
@@ -25,9 +26,14 @@ humanoid.WalkSpeed  = 0
 humanoid.JumpPower  = 0
 humanoid.AutoRotate = false
 
+-- Wait for RemoteEvents created by RemoteSetup on the server
+local remotes         = game.ReplicatedStorage:WaitForChild("Remotes")
+local dashRequest     = remotes:WaitForChild("DashRequest")
+
 -- Initialize modules
 local stateManager   = StateManager.new()
 local physicsApplier = PhysicsApplier.new(rootPart)
+local dashHandler    = DashHandler.new(physicsApplier, dashRequest)
 
 -- Jump state
 local jumpBuffered  = false
@@ -55,10 +61,19 @@ local function faceMovementDirection(moveDirection)
 end
 
 -- Buffer jump input so quick taps on landing still register
+-- Dash input: handled here so it fires once per press (not held)
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
 	if input.KeyCode == Enum.KeyCode.Space then
 		jumpBuffered = true
+	end
+	if input.KeyCode == Enum.KeyCode.Q then
+		local cameraForward = Vector3.new(
+			camera.CFrame.LookVector.X,
+			0,
+			camera.CFrame.LookVector.Z
+		).Unit
+		dashHandler:tryDash(InputHandler.getMoveDirection(camera), cameraForward)
 	end
 end)
 
@@ -69,6 +84,8 @@ local heartbeat = RunService.Heartbeat:Connect(function(dt)
 	local input = {
 		moveDirection = InputHandler.getMoveDirection(camera),
 		isSprinting   = InputHandler.isSprinting(),
+		isDashing     = dashHandler:isDashing(),
+		dashDirection = dashHandler:getDashDirection(),
 	}
 
 	local state           = stateManager:update(input, grounded)

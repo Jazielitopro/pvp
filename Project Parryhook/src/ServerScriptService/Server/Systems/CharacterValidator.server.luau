@@ -1,6 +1,8 @@
 -- CharacterValidator (Script — server only)
 -- Tracks player positions each frame and teleports back anyone moving
 -- faster than the allowed maximum. Runs silently — no client notification.
+-- Handles DashRequest: validates cooldown and opens a speed window so the
+-- dash burst is not incorrectly flagged as a cheat.
 
 local Players    = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -10,6 +12,33 @@ local MAX_ALLOWED_SPEED = Constants.SPRINT_SPEED * Constants.MAX_SPEED_TOLERANCE
 
 -- [Player] = { position: Vector3, timestamp: number }
 local lastValid = {}
+
+-- [Player] = expiry os.clock() timestamp while dash speed window is open
+local dashWindows = {}
+
+-- [Player] = os.clock() of last server-validated dash (server-side cooldown)
+local dashCooldowns = {}
+
+-- DashRequest handler
+local remotes    = game.ReplicatedStorage:WaitForChild("Remotes")
+local dashRequest = remotes:WaitForChild("DashRequest")
+
+dashRequest.OnServerEvent:Connect(function(player, direction)
+	-- Validate direction is a unit vector on the XZ plane (reject spoofed values)
+	if typeof(direction) ~= "Vector3" then return end
+	if direction.Magnitude < 0.9 or direction.Magnitude > 1.1 then return end
+	if math.abs(direction.Y) > 0.1 then return end
+
+	local now = os.clock()
+
+	-- Enforce server-side cooldown
+	local lastDash = dashCooldowns[player]
+	if lastDash and (now - lastDash) < Constants.DASH_COOLDOWN then return end
+
+	-- Record cooldown and open speed window for the dash duration + small buffer
+	dashCooldowns[player] = now
+	dashWindows[player]   = now + Constants.DASH_DURATION + 0.1
+end)
 
 local function validate(player)
 	local character = player.Character
@@ -32,7 +61,11 @@ local function validate(player)
 
 	local speed = (current - record.position).Magnitude / dt
 
-	if speed > MAX_ALLOWED_SPEED then
+	-- Skip speed check during an active server-validated dash window
+	local dashExpiry = dashWindows[player]
+	local inDashWindow = dashExpiry and now < dashExpiry
+
+	if speed > MAX_ALLOWED_SPEED and not inDashWindow then
 		-- Return to last valid position without touching Y (preserve fall state)
 		rootPart.CFrame = CFrame.new(
 			record.position.X,
@@ -53,5 +86,7 @@ RunService.Heartbeat:Connect(function()
 end)
 
 Players.PlayerRemoving:Connect(function(player)
-	lastValid[player] = nil
+	lastValid[player]     = nil
+	dashWindows[player]   = nil
+	dashCooldowns[player] = nil
 end)

@@ -37,4 +37,9 @@ function InputHandler.isSprinting()
 	return UserInputService:IsKeyDown(Enum.KeyCode.LeftShift)
 end
 
+-- Dash key: Q. Change here to rebind.
+function InputHandler.isDashPressed()
+	return UserInputService:IsKeyDown(Enum.KeyCode.Q)
+end
+
 return InputHandler

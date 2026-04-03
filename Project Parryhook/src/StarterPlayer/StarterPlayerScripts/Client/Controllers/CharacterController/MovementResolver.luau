@@ -11,6 +11,12 @@ function MovementResolver.resolve(state, input, currentVelocity, dt)
 	local currentHorizontal = Vector3.new(currentVelocity.X, 0, currentVelocity.Z)
 	local targetSpeed        = 0
 
+	-- During dash: hold the locked direction at DASH_SPEED for the full duration.
+	-- LinearVelocity maintains this — no steering, no deceleration.
+	if state == States.DASHING then
+		return input.dashDirection * Constants.DASH_SPEED
+	end
+
 	if state == States.WALKING then
 		targetSpeed = Constants.WALK_SPEED
 	elseif state == States.SPRINTING then
