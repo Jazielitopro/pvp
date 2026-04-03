@@ -11,11 +11,16 @@ DashHandler.__index = DashHandler
 function DashHandler.new(physicsApplier, dashRequestRemote)
 	return setmetatable({
 		_physics       = physicsApplier,
-		_remote        = dashRequestRemote,
+		_remote        = dashRequestRemote, -- may be nil until RemoteSetup runs
 		_isDashing     = false,
 		_onCooldown    = false,
 		_dashDirection = Vector3.zero,
 	}, DashHandler)
+end
+
+-- Called asynchronously once RemoteSetup has created the event.
+function DashHandler:setRemote(remote)
+	self._remote = remote
 end
 
 -- Returns true if a dash can be executed right now.
@@ -38,7 +43,10 @@ function DashHandler:tryDash(moveDirection, cameraForward)
 	self._physics:applyDash(dir)
 
 	-- Notify server: validate cooldown and open speed window
-	self._remote:FireServer(dir)
+	-- Remote may not be connected yet if RemoteSetup is missing from Studio
+	if self._remote then
+		self._remote:FireServer(dir)
+	end
 
 	-- End dash after duration, then start cooldown
 	task.delay(Constants.DASH_DURATION, function()

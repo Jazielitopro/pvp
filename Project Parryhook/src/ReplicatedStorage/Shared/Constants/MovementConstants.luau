@@ -15,8 +15,8 @@ return {
 	AIR_CONTROL_FACTOR  = 0.4,  -- 0 = no air control, 1 = full control
 
 	-- Dash
-	DASH_SPEED          = 80,   -- studs/s burst velocity
-	DASH_DURATION       = 0.18, -- seconds the dash burst lasts
+	DASH_SPEED          = 55,   -- studs/s burst velocity (reducido para evitar efecto teleport)
+	DASH_DURATION       = 0.22, -- seconds the dash burst lasts
 	DASH_COOLDOWN       = 0.85, -- seconds before next dash is allowed
 
 	-- Slide
