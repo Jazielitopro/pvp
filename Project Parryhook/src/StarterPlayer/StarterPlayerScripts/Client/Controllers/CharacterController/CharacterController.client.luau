@@ -98,7 +98,7 @@ UserInputService.InputBegan:Connect(function(input, processed)
 		dashHandler:tryDash(InputHandler.getMoveDirection(camera), cameraForward)
 	end
 
-	if input.KeyCode == Enum.KeyCode.Z then
+	if input.KeyCode == Enum.KeyCode.E then
 		-- Pass current state so SlideHandler enforces the SPRINTING entry rule
 		slideHandler:trySlide(InputHandler.getMoveDirection(camera), stateManager.current)
 	end

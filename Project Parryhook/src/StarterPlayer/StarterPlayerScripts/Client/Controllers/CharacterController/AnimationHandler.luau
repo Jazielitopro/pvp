@@ -1,92 +1,97 @@
 -- AnimationHandler
--- Plays state-specific overlay animations (dash, slide) using Action priority,
--- which blends on top of the default Animate script locomotion tracks.
+-- Creates visible pose animations using TweenService + RootJoint.C0.
+-- Does NOT require external Roblox asset IDs — works immediately.
 --
--- ┌─────────────────────────────────────────────────────────────┐
--- │  HOW TO ADD REAL ANIMATIONS                                 │
--- │  1. Create the animation in Roblox Studio Animation Editor  │
--- │  2. Publish it (requires the game to be published)          │
--- │  3. Copy the asset ID into ANIMATION_IDS below              │
--- │  4. The system loads and plays it automatically             │
--- └─────────────────────────────────────────────────────────────┘
+-- Why RootJoint.C0 and not Animator tracks?
+--   The Animator modifies Motor6D.Transform. Tweening C0 is additive
+--   on top of Transform, so it blends cleanly with default locomotion
+--   without fighting the Animate script.
+--
+-- Poses:
+--   Slide → forward pitch (character leans into the slide)
+--   Dash  → quick forward lean then snaps back (burst feel)
 
--- Replace "0" with real Roblox animation asset IDs when available.
--- Entries with ID = "0" are silently skipped (no error, no crash).
-local ANIMATION_IDS = {
-	dash  = "0",   -- TODO: paste dash/roll animation ID here
-	slide = "0",   -- TODO: paste slide/crouch animation ID here
-}
+local TweenService = game:GetService("TweenService")
 
--- ──────────────────────────────────────────────────────────────────────────────
+-- Tween configs
+local SLIDE_ENTER_INFO = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local SLIDE_EXIT_INFO  = TweenInfo.new(0.20, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local DASH_LEAN_INFO   = TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local DASH_RETURN_INFO = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+-- Pitch angles
+local SLIDE_PITCH = math.rad(-22) -- forward lean during slide
+local DASH_PITCH  = math.rad(-14) -- brief forward lean on dash start
+
+-- ─────────────────────────────────────────────────────────────────────────────
 
 local AnimationHandler = {}
 AnimationHandler.__index = AnimationHandler
 
-local function loadTrack(animator, id, looped)
-	if id == "0" or id == "" then return nil end
+function AnimationHandler.new(humanoid)
+	-- RootJoint connects HumanoidRootPart → LowerTorso in R15.
+	-- Tweening its C0 tilts the entire character body.
+	local rootPart  = humanoid.RootPart
+	local rootJoint = rootPart and rootPart:FindFirstChild("RootJoint")
 
-	local anim = Instance.new("Animation")
-	anim.AnimationId = "rbxassetid://" .. id
-
-	local ok, track = pcall(function()
-		return animator:LoadAnimation(anim)
-	end)
-
-	if not ok or not track then
-		warn("AnimationHandler: failed to load animation ID " .. id)
-		return nil
+	if not rootJoint then
+		warn("AnimationHandler: RootJoint not found — poses disabled.")
 	end
 
-	track.Priority = Enum.AnimationPriority.Action
-	track.Looped   = looped or false
-	return track
-end
-
-function AnimationHandler.new(humanoid)
-	local animator = humanoid:WaitForChild("Animator")
-
-	local tracks = {
-		dash  = loadTrack(animator, ANIMATION_IDS.dash,  false), -- one-shot
-		slide = loadTrack(animator, ANIMATION_IDS.slide, true),  -- loops while sliding
-	}
+	local defaultC0 = rootJoint and rootJoint.C0 or CFrame.new()
+	local slideC0   = defaultC0 * CFrame.Angles(SLIDE_PITCH, 0, 0)
+	local dashC0    = defaultC0 * CFrame.Angles(DASH_PITCH,  0, 0)
 
 	return setmetatable({
-		_tracks       = tracks,
-		_activeState  = "",
+		_joint      = rootJoint,
+		_defaultC0  = defaultC0,
+		_slideC0    = slideC0,
+		_dashC0     = dashC0,
+		_prevState  = "",
+		_dashTween  = nil,
 	}, AnimationHandler)
 end
 
--- Call once per frame (or on state change).
--- Starts the correct animation and stops the previous one.
+-- Called every frame from Heartbeat. Only acts on state transitions.
 function AnimationHandler:update(state)
-	if state == self._activeState then return end
+	if state == self._prevState then return end
+	local prev = self._prevState
+	self._prevState = state
 
-	local prev = self._activeState
-	self._activeState = state
+	if not self._joint then return end
 
-	-- Stop previous special animation
-	if prev == "dashing" and self._tracks.dash then
-		self._tracks.dash:Stop(0.1)
-	end
-	if prev == "sliding" and self._tracks.slide then
-		self._tracks.slide:Stop(0.2)
+	-- ── Exiting slide ──────────────────────────────────────────────────────
+	if prev == "sliding" and state ~= "sliding" then
+		TweenService:Create(self._joint, SLIDE_EXIT_INFO, { C0 = self._defaultC0 }):Play()
 	end
 
-	-- Play new special animation
-	if state == "dashing" and self._tracks.dash then
-		self._tracks.dash:Play(0.05)
+	-- ── Entering slide ─────────────────────────────────────────────────────
+	if state == "sliding" then
+		TweenService:Create(self._joint, SLIDE_ENTER_INFO, { C0 = self._slideC0 }):Play()
 	end
-	if state == "sliding" and self._tracks.slide then
-		self._tracks.slide:Play(0.1)
+
+	-- ── Entering dash: lean forward then snap back ─────────────────────────
+	if state == "dashing" then
+		-- Cancel any ongoing dash return tween
+		if self._dashTween then self._dashTween:Cancel() end
+
+		TweenService:Create(self._joint, DASH_LEAN_INFO, { C0 = self._dashC0 }):Play()
+
+		-- Return to default after the lean reaches peak
+		self._dashTween = TweenService:Create(self._joint, DASH_RETURN_INFO, { C0 = self._defaultC0 })
+		task.delay(0.08, function()
+			if self._dashTween then self._dashTween:Play() end
+		end)
 	end
 end
 
+-- Reset character to default pose (call on cleanup / respawn).
 function AnimationHandler:destroy()
-	for _, track in pairs(self._tracks) do
-		if track then
-			track:Stop()
-			track:Destroy()
-		end
+	if self._joint then
+		self._joint.C0 = self._defaultC0
+	end
+	if self._dashTween then
+		self._dashTween:Cancel()
 	end
 end
 
