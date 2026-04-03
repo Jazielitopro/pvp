@@ -1,8 +1,11 @@
 -- StateManager
 -- Tracks the player's current movement state.
 -- Step 1 states: IDLE, WALKING, SPRINTING, AIRBORNE
--- Step 2 adds: DASHING
--- Slide state will be added in Step 3.
+-- Step 2 adds:   DASHING
+-- Step 3 adds:   SLIDING
+--
+-- Priority order (highest to lowest):
+--   DASHING → SLIDING → AIRBORNE → SPRINTING → WALKING → IDLE
 
 local States = {
 	IDLE      = "idle",
@@ -10,6 +13,7 @@ local States = {
 	SPRINTING = "sprinting",
 	AIRBORNE  = "airborne",
 	DASHING   = "dashing",
+	SLIDING   = "sliding",
 }
 
 local StateManager = {}
@@ -29,9 +33,14 @@ function StateManager:update(input, isGrounded)
 	self._wasGrounded = self._grounded
 	self._grounded    = isGrounded
 
-	-- Dash overrides all other states
+	-- Priority: DASHING → SLIDING → AIRBORNE → ground states
 	if input.isDashing then
 		self.current = States.DASHING
+		return self.current
+	end
+
+	if input.isSliding then
+		self.current = States.SLIDING
 		return self.current
 	end
 

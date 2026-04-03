@@ -42,4 +42,9 @@ function InputHandler.isDashPressed()
 	return UserInputService:IsKeyDown(Enum.KeyCode.Q)
 end
 
+-- Slide key: LeftControl. Change here to rebind.
+function InputHandler.isSlidePressed()
+	return UserInputService:IsKeyDown(Enum.KeyCode.LeftControl)
+end
+
 return InputHandler

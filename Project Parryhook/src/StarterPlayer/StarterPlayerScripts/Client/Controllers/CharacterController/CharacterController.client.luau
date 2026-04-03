@@ -11,6 +11,7 @@ local StateManager     = require(script.StateManager)
 local MovementResolver = require(script.MovementResolver)
 local PhysicsApplier   = require(script.PhysicsApplier)
 local DashHandler      = require(script.DashHandler)
+local SlideHandler     = require(script.SlideHandler)
 local Constants        = require(game.ReplicatedStorage.Shared.Constants.MovementConstants)
 
 local player  = Players.LocalPlayer
@@ -34,6 +35,7 @@ local dashRequest     = remotes:WaitForChild("DashRequest")
 local stateManager   = StateManager.new()
 local physicsApplier = PhysicsApplier.new(rootPart)
 local dashHandler    = DashHandler.new(physicsApplier, dashRequest)
+local slideHandler   = SlideHandler.new()
 
 -- Jump state
 local jumpBuffered  = false
@@ -60,13 +62,18 @@ local function faceMovementDirection(moveDirection)
 	rootPart.CFrame = rootPart.CFrame:Lerp(target, 0.25)
 end
 
--- Buffer jump input so quick taps on landing still register
--- Dash input: handled here so it fires once per press (not held)
+-- Input events: jump, dash, slide — all handled once per press
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
+
 	if input.KeyCode == Enum.KeyCode.Space then
+		-- Jump cancels an active slide before buffering
+		if slideHandler:isSliding() then
+			slideHandler:cancel()
+		end
 		jumpBuffered = true
 	end
+
 	if input.KeyCode == Enum.KeyCode.Q then
 		local cameraForward = Vector3.new(
 			camera.CFrame.LookVector.X,
@@ -75,17 +82,34 @@ UserInputService.InputBegan:Connect(function(input, processed)
 		).Unit
 		dashHandler:tryDash(InputHandler.getMoveDirection(camera), cameraForward)
 	end
+
+	if input.KeyCode == Enum.KeyCode.LeftControl then
+		-- Pass current state so SlideHandler enforces the SPRINTING entry rule
+		slideHandler:trySlide(InputHandler.getMoveDirection(camera), stateManager.current)
+	end
 end)
 
 -- Main update loop
 local heartbeat = RunService.Heartbeat:Connect(function(dt)
 	local grounded = checkGrounded()
 
+	-- Advance slide timer each frame; cancel if player leaves the ground
+	if slideHandler:isSliding() then
+		if not grounded then
+			slideHandler:cancel()
+		else
+			slideHandler:tick(dt)
+		end
+	end
+
 	local input = {
-		moveDirection = InputHandler.getMoveDirection(camera),
-		isSprinting   = InputHandler.isSprinting(),
-		isDashing     = dashHandler:isDashing(),
-		dashDirection = dashHandler:getDashDirection(),
+		moveDirection  = InputHandler.getMoveDirection(camera),
+		isSprinting    = InputHandler.isSprinting(),
+		isDashing      = dashHandler:isDashing(),
+		dashDirection  = dashHandler:getDashDirection(),
+		isSliding      = slideHandler:isSliding(),
+		slideDirection = slideHandler:getSlideDirection(),
+		slideProgress  = slideHandler:getProgress(),
 	}
 
 	local state           = stateManager:update(input, grounded)
@@ -93,7 +117,20 @@ local heartbeat = RunService.Heartbeat:Connect(function(dt)
 	local horizontal      = MovementResolver.resolve(state, input, currentVelocity, dt)
 
 	physicsApplier:applyVelocity(horizontal)
-	faceMovementDirection(input.moveDirection)
+
+	-- During slide: face the locked slide direction, not live input
+	if state == "sliding" then
+		faceMovementDirection(input.slideDirection)
+	else
+		faceMovementDirection(input.moveDirection)
+	end
+
+	-- Crouch effect: lower HipHeight while sliding, restore otherwise
+	if state == "sliding" then
+		humanoid.HipHeight = Constants.SLIDE_HIP_HEIGHT
+	else
+		humanoid.HipHeight = Constants.NORMAL_HIP_HEIGHT
+	end
 
 	-- Jump: only when grounded, buffered input, and not on cooldown
 	if jumpBuffered and grounded and not jumpCooldown then
