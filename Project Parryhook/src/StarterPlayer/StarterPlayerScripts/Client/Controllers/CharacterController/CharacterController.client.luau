@@ -6,13 +6,14 @@ local RunService      = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Players         = game:GetService("Players")
 
-local InputHandler     = require(script.InputHandler)
-local StateManager     = require(script.StateManager)
-local MovementResolver = require(script.MovementResolver)
-local PhysicsApplier   = require(script.PhysicsApplier)
-local DashHandler      = require(script.DashHandler)
-local SlideHandler     = require(script.SlideHandler)
-local Constants        = require(game.ReplicatedStorage.Shared.Constants.MovementConstants)
+local InputHandler      = require(script.InputHandler)
+local StateManager      = require(script.StateManager)
+local MovementResolver  = require(script.MovementResolver)
+local PhysicsApplier    = require(script.PhysicsApplier)
+local DashHandler       = require(script.DashHandler)
+local SlideHandler      = require(script.SlideHandler)
+local CameraController  = require(script.CameraController)
+local Constants         = require(game.ReplicatedStorage.Shared.Constants.MovementConstants)
 
 local player  = Players.LocalPlayer
 local camera  = workspace.CurrentCamera
@@ -32,10 +33,16 @@ local remotes         = game.ReplicatedStorage:WaitForChild("Remotes")
 local dashRequest     = remotes:WaitForChild("DashRequest")
 
 -- Initialize modules
-local stateManager   = StateManager.new()
-local physicsApplier = PhysicsApplier.new(rootPart)
-local dashHandler    = DashHandler.new(physicsApplier, dashRequest)
-local slideHandler   = SlideHandler.new()
+local stateManager      = StateManager.new()
+local physicsApplier    = PhysicsApplier.new(rootPart)
+local dashHandler       = DashHandler.new(physicsApplier, dashRequest)
+local slideHandler      = SlideHandler.new()
+local cameraController  = CameraController.new(camera, humanoid)
+
+-- Start camera — passes a getter so CameraController always reads the latest state
+cameraController:start(function()
+	return stateManager.current
+end)
 
 -- Jump state
 local jumpBuffered  = false
@@ -152,4 +159,5 @@ end)
 player.CharacterRemoving:Connect(function()
 	heartbeat:Disconnect()
 	physicsApplier:destroy()
+	cameraController:stop()
 end)

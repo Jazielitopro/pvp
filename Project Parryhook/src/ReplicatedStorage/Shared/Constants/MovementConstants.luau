@@ -27,6 +27,19 @@ return {
 	SLIDE_HIP_HEIGHT    = 0.5,  -- Humanoid.HipHeight while crouched (R15 default is 2.0)
 	NORMAL_HIP_HEIGHT   = 2.0,  -- Humanoid.HipHeight when standing
 
+	-- Camera
+	FOV_NORMAL          = 90,   -- default field of view
+	FOV_SPRINT          = 95,   -- slight zoom-out while sprinting
+	FOV_DASH            = 105,  -- rush-of-speed feel during dash
+	FOV_LERP_SPEED      = 10,   -- how fast FOV transitions between states
+
+	-- Head bob
+	BOB_WALK_AMPLITUDE  = 0.08, -- vertical offset in studs while walking
+	BOB_WALK_FREQUENCY  = 8,    -- oscillations per second while walking
+	BOB_SPRINT_AMPLITUDE = 0.14,
+	BOB_SPRINT_FREQUENCY = 13,
+	BOB_LERP_SPEED      = 10,   -- how fast bob fades in/out between states
+
 	-- Physics / detection
 	GROUND_CHECK_DIST   = 2.5,  -- raycast length downward from RootPart
 	MAX_SPEED_TOLERANCE = 1.5,  -- server validator: multiplier above SPRINT_SPEED before correcting
