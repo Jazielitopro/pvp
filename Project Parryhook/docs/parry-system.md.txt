@@ -1,0 +1,23 @@
+# Parry System (In Design)
+
+## Goal
+Allow players to deflect or reflect incoming projectiles using precise timing.
+
+## Design Intent
+- High skill ceiling
+- High reward
+- High risk
+
+## Requirements
+- Tight timing window
+- Clear visual feedback
+- Server validation with client responsiveness
+
+## Unknowns (To Define)
+- Which projectiles are parryable
+- Perfect vs normal parry
+- Effects of success/failure
+
+## Risks
+- Feels unfair under latency
+- Overpowered if too easy

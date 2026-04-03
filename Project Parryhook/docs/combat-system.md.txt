@@ -1,0 +1,31 @@
+# Combat System
+
+## Weapon Type
+Projectile-based system.
+
+## Base Weapon (MVP)
+- Revolver
+- 6 bullets
+- 3 hits to kill
+- High damage per shot
+- Requires reload
+
+## Combat Rhythm
+- Peek → Shoot → Reposition
+- Not sustained fire
+- High punishment for missing shots
+
+## Damage Model
+- Chunk-based damage (not DPS)
+- No random spread (or very minimal)
+- Precision-based
+
+## Health System
+- Fixed max health
+- Passive regeneration after delay
+- Encourages disengage and reposition
+
+## Design Goals
+- Every shot matters
+- Every mistake is punishable
+- Combat is readable and fair

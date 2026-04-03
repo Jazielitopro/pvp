@@ -1,0 +1,30 @@
+# Movement System
+
+## Core Mechanics
+- Walk / Sprint
+- Dash
+- Slide
+- Jump
+- Air control
+
+## Dash Design
+- No invulnerability frames
+- Used for repositioning only
+- High skill expression tool
+
+## Movement Philosophy
+Movement is:
+- Offensive
+- Defensive
+- Strategic
+
+Not just traversal.
+
+## Constraints
+- Must remain readable to other players
+- Must not break hit registration
+- Must feel responsive locally
+
+## Risks
+- Too fast = desync
+- Too slow = boring

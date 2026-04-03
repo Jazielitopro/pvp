@@ -1,0 +1,13 @@
+# Game Modes
+
+## Arena Mode
+- 1v1 to 5v5
+- Score or elimination based
+
+## Parry Mode (Rotational)
+- Focus on timing and reflection
+- Reduced importance of raw damage
+
+## Goals
+- Competitive gameplay
+- Replayability

@@ -1,0 +1,17 @@
+# Networking Considerations
+
+## Key Systems Affected
+- Movement
+- Projectiles
+- Parry
+- Grapple
+
+## Design Goals
+- Client responsiveness
+- Server authority for validation
+- Fairness under latency
+
+## Risks
+- Desync
+- Hit inconsistency
+- Exploits

@@ -1,0 +1,37 @@
+# Vision
+
+## High Concept
+A fast-paced competitive PvP shooter in Roblox focused on movement, precision, and timing.
+
+Players engage in intense duels using:
+- Advanced movement
+- Projectile weapons
+- Tactical positioning
+- Future parry mechanics
+
+## Player Fantasy
+The player feels like:
+- Fast
+- Precise
+- Untouchable when skilled
+- Outplaying opponents through mechanics
+
+## Pillars
+- Speed with control
+- Skill expression
+- Competitive fairness
+- Replayability
+- Mechanical mastery
+
+## What Makes This Game Unique
+- Projectile combat in a high-speed environment
+- Grapple-based vertical combat
+- Parry system (future core mechanic)
+- Trade-off perk system
+- First-person precision gameplay
+
+## Target Experience
+- Fast but readable
+- Punishing but fair
+- High skill ceiling
+- Highly replayable

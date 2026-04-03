@@ -1,0 +1,46 @@
+# Progression System
+
+## Goals
+- Reward player engagement
+- Encourage continued play
+- Provide cosmetic customization
+- Avoid pay-to-win mechanics
+
+## Core Progression
+- XP per match
+- Account level
+- Unlock rewards over time
+
+## Rewards
+- Weapon skins
+- Grapple effects
+- Dash trails
+- Parry effects (future)
+- Player cosmetics
+
+## Currency
+- Soft currency (earned in matches)
+- Optional premium currency
+
+## Loot Systems
+- Loot boxes / drops
+- Random rewards with rarity tiers
+- Pity system recommended
+
+## Competitive Integrity Rule
+Progression must NOT affect:
+- Damage
+- Health
+- Core gameplay advantage
+
+## Perks Consideration
+- Perks are gameplay affecting
+- Must be balanced for ranked
+- May require:
+  - full unlock in ranked
+  - or restricted usage
+
+## Long-Term Systems (Future)
+- Battle pass
+- Seasonal rewards
+- Challenges

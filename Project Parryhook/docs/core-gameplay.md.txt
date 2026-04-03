@@ -1,0 +1,34 @@
+# Core Gameplay
+
+## Core Loop
+1. Player identifies target
+2. Engages using movement (dash, jump, grapple)
+3. Fires projectile weapon
+4. Uses positioning to avoid damage
+5. Disengages or finishes opponent
+6. Regenerates health if out of combat
+
+## Combat Philosophy
+Combat is based on:
+- Precision aiming
+- Movement prediction
+- Positioning
+- Timing
+
+Not based on:
+- Spray
+- Randomness
+- High DPS spam
+
+## Player Skill Expression
+Skill is expressed through:
+- Movement control
+- Aim precision
+- Timing
+- Map awareness
+- Decision making under pressure
+
+## Desired Feeling
+- Fast but readable
+- Skillful but fair
+- Punishing but rewarding

@@ -1,0 +1,25 @@
+# Development Roadmap
+
+## Phase 1
+Movement prototype
+
+## Phase 2
+Combat prototype
+
+## Phase 3
+Projectile system
+
+## Phase 4
+Grapple system
+
+## Phase 5
+Parry system
+
+## Phase 6
+Match system
+
+## Phase 7
+Perks
+
+## Phase 8
+Progression + UI

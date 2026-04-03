@@ -1,0 +1,18 @@
+# Grapple System
+
+## MVP Scope
+- Only attaches to environment
+
+## Uses
+- Vertical movement
+- Fast repositioning
+- Escape or engage
+
+## Constraints
+- Must not break map design
+- Must be predictable
+- Must be readable
+
+## Design Risks
+- Overuse creates chaos
+- Bad sync feels terrible

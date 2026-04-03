@@ -1,0 +1,48 @@
+# Map Design
+
+## Design Philosophy
+Maps must support:
+- Vertical movement
+- Grapple usage
+- Fast repositioning
+- Tactical decision making
+
+## Core Elements
+- Multiple height levels
+- Grapple anchor points
+- Open combat zones
+- Covered areas
+- Flanking routes
+
+## Standard Layout
+- Central contested area (mid)
+- Two side routes
+- Vertical access points
+- Escape paths
+
+## Movement Integration
+Maps are designed FOR movement:
+- Not flat
+- Not static
+- Not linear
+
+## Grapple Integration
+- Clear anchor points
+- Predictable surfaces
+- Visible opportunities
+
+## Combat Balance
+Maps must avoid:
+- Too open → favors aim only
+- Too closed → favors rush only
+- Too vertical → chaos
+
+## Readability
+Players must:
+- Understand positioning quickly
+- Identify threats clearly
+- Navigate intuitively
+
+## Future Expansion
+- Themed maps (events/seasons)
+- Dynamic elements (optional)

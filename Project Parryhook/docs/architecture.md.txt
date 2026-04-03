@@ -1,0 +1,22 @@
+# System Architecture
+
+## Core Systems
+- Character Controller
+- Combat System
+- Projectile System
+- Parry System
+- Grapple System
+- Perks System
+- Match Manager
+- UI Manager
+- Data System
+
+## Design Principles
+- Modular
+- Scalable
+- Data-driven
+
+## Separation
+- Gameplay logic
+- Visual feedback
+- Network logic

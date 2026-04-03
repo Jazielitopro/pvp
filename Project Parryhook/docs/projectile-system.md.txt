@@ -1,0 +1,21 @@
+# Projectile System
+
+## Core Behavior
+- Projectiles have velocity
+- Travel time exists
+- Requires prediction
+
+## Responsibilities
+- Spawn
+- Movement simulation
+- Collision detection
+- Damage application
+
+## Future Compatibility
+- Must support parry (reflection)
+- Must support different projectile types
+
+## Key Challenges
+- Latency handling
+- Ownership of projectile
+- Hit validation fairness

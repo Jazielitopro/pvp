@@ -1,0 +1,21 @@
+# Perks System
+
+## Philosophy
+All perks must have trade-offs.
+
+## Examples
+- More speed / less health
+- More damage / longer cooldown
+- Better mobility / worse control
+
+## Design Goals
+- Build diversity
+- No dominant strategy
+- Maintain competitive fairness
+
+## Risks
+- Breaking ranked integrity
+- Overpowered combinations
+
+## Future
+- Transition into class-based system

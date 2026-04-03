@@ -1,0 +1,67 @@
+# Project Context - Roblox PvP Movement Shooter
+
+## Overview
+We are building a competitive PvP arena shooter in Roblox Studio using Luau.
+
+The game is focused on:
+- High-speed movement
+- Projectile-based combat
+- Precision aiming
+- Grappling mobility
+- Parry mechanics (in development)
+- Competitive fairness
+
+The game is first-person and designed for high-skill gameplay.
+
+## Core Identity
+This is NOT a casual shooter.
+
+This is a:
+- Skill-based
+- High mechanical ceiling
+- Fast-paced combat game
+
+Inspired by Ultrakill pacing but adapted for multiplayer constraints.
+
+## Key Design Decisions
+- Projectile-based weapons (not hitscan)
+- Revolver-style primary weapon (6 bullets, 3-hit kill)
+- Passive health regeneration
+- Dash has NO invulnerability frames
+- Grapple attaches only to environment (MVP)
+- Perks system before classes
+- Ranked mode will exist
+- Parry system is not fully defined yet
+- Special parry mode will be rotating
+
+## Core Gameplay Pillars
+1. Movement is a weapon
+2. Precision matters more than spam
+3. Timing creates advantage
+4. Verticality creates strategy
+5. Every system must be fair under latency
+
+## Technical Constraints
+- Roblox client-server model
+- Must handle high-speed movement
+- Must handle projectile simulation
+- Must avoid exploit-prone logic
+- Must maintain responsiveness
+
+## Development Philosophy
+- Build systems modularly
+- Prioritize feel before content
+- Prototype before scaling
+- Avoid premature complexity
+
+## What Claude Should Do
+- Help design systems and architecture
+- Break features into modules
+- Identify edge cases and risks
+- Suggest scalable implementations
+- Maintain competitive integrity
+
+## What Claude Should NOT Do
+- Do not generate full code unless requested
+- Do not overengineer early systems
+- Do not ignore Roblox networking limitations
