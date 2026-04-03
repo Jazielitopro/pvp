@@ -1,18 +1,46 @@
 # Build Plan — Parryhook
 
-## Decisions Required Before Building
+## Decisions — RESOLVED
 
-These must be resolved before implementation starts:
+### 1. Lag Compensation — Option C (Rewind with cap)
 
-1. **Lag compensation:** Will the server rewind target positions to the client's fire timestamp?
-   - YES → hits feel fair at high ping, more complex server logic
-   - NO → pure server position, simpler but hitting moving targets feels broken above ~100ms
-   - Recommendation: YES, with a max rewind cap (~150ms)
+**Decision:** Server rewinds target positions to the client's fire timestamp, capped at 150ms max rewind.
 
-2. **Parry timing model:** How is the parry window validated server-side?
-   - Option A: Fixed time window after client input arrives (simple, but unfair under lag)
-   - Option B: Server checks projectile proximity at time of input (fair, more complex)
-   - Recommendation: Option B with a small forgiveness buffer
+**How it works:**
+- Server keeps a rolling position history for every player (last ~200ms)
+- On fire request: server rewinds the target's position to the client's timestamp
+- Validates the hit against that rewound position
+- If client timestamp is older than 150ms cap: use server's current position instead
+
+**Why this fits Parryhook:**
+- Revolver has 6 bullets and high miss punishment — hits must feel earned, not denied by network
+- Movement is an offensive/defensive tool — without compensation, movement loses its protective value
+- Roblox already has baseline latency overhead; pure server position would break the game before reaching "high" ping
+
+**Risk to monitor:** Players artificially inflating ping to gain rewind advantage. Mitigate with anomalous ping detection.
+
+---
+
+### 2. Parry Timing — Option B for MVP, Option C for polish
+
+**MVP Decision (Phase 5 initial build):** Server checks projectile proximity at time of input, with a generous radius.
+
+**How it works (MVP):**
+- Client sends parry input to server
+- Server finds all active projectiles within a defined radius around the player at that moment
+- If any qualify: parry succeeds, projectile ownership transfers, velocity reverses
+- Radius is intentionally generous during prototyping for tuning flexibility
+
+**Why start here:** Parry still has open design questions (which projectiles are parriable, perfect vs normal parry, punishment on fail). Simpler model lets the design be validated before adding complexity.
+
+**Polish Decision (Phase 5 final):** Hybrid rewind — server rewinds the projectile's position to the client's input timestamp, then validates proximity. Adds a small distance buffer.
+
+**How it works (polish):**
+- Consistent with the lag compensation model already in place for projectiles
+- What the player sees on screen is exactly what the server validates
+- Buffer distance replaces the generous MVP radius with a tighter, calibrated value
+
+**Migration path:** MVP → Polish is a contained change inside ParryHandler. No other module changes needed.
 
 ---
 

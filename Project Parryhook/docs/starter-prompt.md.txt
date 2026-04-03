@@ -40,8 +40,17 @@ We are building a competitive PvP arena shooter in Roblox Studio using Luau.
 - FeedbackDispatcher — server to client signals for VFX/SFX
 
 ## Key Decisions Made
-- Lag compensation: YES — server rewinds target position to client fire timestamp, capped at ~150ms
-- Parry timing: server checks projectile proximity at time of input (Option B), with small forgiveness buffer
+
+### Lag Compensation — Option C (Rewind with cap)
+- Server keeps rolling position history per player (~200ms window)
+- On hit validation: rewind target position to client fire timestamp
+- Hard cap at 150ms — beyond that, use current server position
+- Risk to monitor: artificial ping inflation
+
+### Parry Timing — Two-stage
+- MVP (Phase 5 initial): Option B — server checks projectile proximity at input time, generous radius
+- Polish (Phase 5 final): Option C — server rewinds projectile to client input timestamp, tight calibrated buffer
+- Migration is contained inside ParryHandler, no other module changes needed
 
 ## Current Phase
 [FILL IN: e.g., "Phase 1 — Movement Prototype, Step 2: Dash implementation"]
