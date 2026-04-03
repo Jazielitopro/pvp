@@ -1,0 +1,238 @@
+# Build Plan — Parryhook
+
+## Decisions — RESOLVED
+
+### 1. Lag Compensation — Option C (Rewind with cap)
+
+**Decision:** Server rewinds target positions to the client's fire timestamp, capped at 150ms max rewind.
+
+**How it works:**
+- Server keeps a rolling position history for every player (last ~200ms)
+- On fire request: server rewinds the target's position to the client's timestamp
+- Validates the hit against that rewound position
+- If client timestamp is older than 150ms cap: use server's current position instead
+
+**Why this fits Parryhook:**
+- Revolver has 6 bullets and high miss punishment — hits must feel earned, not denied by network
+- Movement is an offensive/defensive tool — without compensation, movement loses its protective value
+- Roblox already has baseline latency overhead; pure server position would break the game before reaching "high" ping
+
+**Risk to monitor:** Players artificially inflating ping to gain rewind advantage. Mitigate with anomalous ping detection.
+
+---
+
+### 2. Parry Timing — Option B for MVP, Option C for polish
+
+**MVP Decision (Phase 5 initial build):** Server checks projectile proximity at time of input, with a generous radius.
+
+**How it works (MVP):**
+- Client sends parry input to server
+- Server finds all active projectiles within a defined radius around the player at that moment
+- If any qualify: parry succeeds, projectile ownership transfers, velocity reverses
+- Radius is intentionally generous during prototyping for tuning flexibility
+
+**Why start here:** Parry still has open design questions (which projectiles are parriable, perfect vs normal parry, punishment on fail). Simpler model lets the design be validated before adding complexity.
+
+**Polish Decision (Phase 5 final):** Hybrid rewind — server rewinds the projectile's position to the client's input timestamp, then validates proximity. Adds a small distance buffer.
+
+**How it works (polish):**
+- Consistent with the lag compensation model already in place for projectiles
+- What the player sees on screen is exactly what the server validates
+- Buffer distance replaces the generous MVP radius with a tighter, calibrated value
+
+**Migration path:** MVP → Polish is a contained change inside ParryHandler. No other module changes needed.
+
+---
+
+## Phase 1 — Movement Prototype
+
+**Goal:** Character feels responsive and readable. All movement options functional.
+
+### Steps
+1. Basic character controller (walk, sprint, jump, air control)
+2. Dash — no iframes, cooldown-based, server-validated
+3. Slide — enters from sprint, has momentum
+4. First-person camera with movement bob
+5. Validate: movement does not break hit registration at high speed
+6. Validate: movement is readable to other players (no rubber-banding)
+
+### Exit Criteria
+- Movement feels fluid and responsive locally
+- No desync visible on LAN test with 2 clients
+- Dash cannot be spammed to teleport
+
+---
+
+## Phase 2 — Combat Prototype
+
+**Goal:** Shooting feels impactful. Damage model confirmed.
+
+### Steps
+1. Server-side ammo counter (client is display only)
+2. Fire request pipeline: client input → server validation → spawn event
+3. Revolver: 6 bullets, manual reload, no spread
+4. Chunk damage model: 3 hits = kill
+5. Health system: fixed max, passive regen after delay
+6. Hit feedback: sound + screen effect on damage received
+7. Kill confirmation event
+
+### Exit Criteria
+- Ammo cannot be exploited client-side
+- 3 clean hits kill a target consistently
+- Regen delay resets correctly on each hit received
+
+---
+
+## Phase 3 — Projectile System
+
+**Goal:** Bullets have travel time and require prediction. System is parry-ready.
+
+### Module Build Order
+
+#### Step 3.1 — ProjectileRegistry
+Build first. Everything else depends on it.
+- Active projectile table: ID → { owner, type, position, velocity, spawnTime, status }
+- Status enum: active | resolved | parried | expired
+- TTL enforcement: auto-expire after max lifetime
+- Cleanup: remove resolved entries immediately; TTL sweep as safety net
+- Unique ID: monotonically incrementing counter, never recycled mid-session
+
+#### Step 3.2 — ProjectileSpawner
+- Server-side validation on every fire request:
+  - Cooldown check (server clock, not client)
+  - Ammo check (server count)
+  - Origin plausibility (within threshold of server character position)
+  - Character alive check
+- On pass: register in Registry, fire replication event to all clients
+- On fail: silent reject (no feedback to exploiters)
+
+#### Step 3.3 — ProjectileSimulator (Server)
+- Steps projectile position each server tick using velocity
+- Uses raycast between previous and current position (prevents tunneling)
+- Feeds results to CollisionHandler each step
+- Handles server lag spikes: steps frame-by-frame, never skips
+
+#### Step 3.4 — ProjectileSimulator (Client)
+- Mirrors server simulation visually
+- Runs ahead for local responsiveness
+- No authority — visual only
+- Snaps/corrects if divergence exceeds threshold
+
+#### Step 3.5 — CollisionHandler
+- Receives raycast results from server Simulator
+- Determines hit type: player | environment | miss
+- Checks Registry: skip if projectile already resolved
+- Routes to DamageApplicator or marks as environment hit
+- Handles simultaneous hits: sequential processing within tick, re-check health before each
+
+#### Step 3.6 — DamageApplicator
+- Receives confirmed hit from CollisionHandler
+- Applies damage to target (server health value)
+- Fires feedback event to all relevant clients
+- Resets regen delay on target
+
+#### Step 3.7 — FeedbackDispatcher
+- Receives events from DamageApplicator and ParryHandler
+- Sends RemoteEvents to clients: hit confirm, damage received, miss, parry result
+- Decoupled from gameplay logic — pure signaling
+
+#### Step 3.8 — Edge Case Hardening
+Address in order of severity:
+1. Tunneling test (fast projectile through thin wall)
+2. Simultaneous hit test (two shots same tick same target)
+3. Fire-during-death test
+4. Position spoof test (manual exploit attempt)
+5. Registry cleanup stress test (spawn many projectiles, verify cleanup)
+
+### Exit Criteria
+- Projectile visually matches server trajectory within acceptable threshold
+- No double-damage on simultaneous hits
+- Projectile cannot be used to damage from spawn or invalid positions
+- Registry shows zero leaks after 5-minute stress test
+
+---
+
+## Phase 4 — Grapple System
+
+**Goal:** Vertical repositioning tool. Attaches to environment only.
+
+### Steps
+1. Raycast from player to target surface
+2. Validate: environment only (not players), within range
+3. Pull player toward anchor point with configurable force
+4. Release on input or on arrival
+5. Cooldown enforced server-side
+6. Validate: does not clip through geometry
+7. Validate: readable to other players (no teleport appearance)
+
+### Exit Criteria
+- Grapple consistently attaches to intended surfaces
+- Cannot attach to players or out-of-bounds geometry
+- Does not break hit registration during swing
+
+---
+
+## Phase 5 — Parry System
+
+**Goal:** High-skill projectile deflection. Timing-based. Server-validated.
+
+### Steps
+1. Client: detect parry input, send to server with timestamp
+2. Server (ParryHandler): check all active projectiles against player position
+3. Validate: projectile within parry range at time of input
+4. Validate: projectile not already resolved
+5. On success: transfer ownership, reverse velocity, update Registry
+6. On fail: silent (no punishment defined yet)
+7. Handle: two simultaneous parry requests on same projectile (first wins)
+8. Handle: reflected projectile hits third player (uses current owner)
+9. Handle: reflected projectile hits original shooter (allowed)
+10. FeedbackDispatcher: send parry success/fail signal to client
+
+### Exit Criteria
+- Parry window feels fair at 50ms and 150ms ping
+- Reflected projectile correctly owned by defender
+- No double-parry possible on same projectile
+- Parry cannot be triggered on already-resolved projectiles
+
+---
+
+## Phase 6 — Match System
+
+**Goal:** Full match loop. Score tracking. Round management.
+
+### Steps
+1. MatchManager: lobby → active → end states
+2. Player spawn and respawn logic
+3. Score tracking (kills, deaths)
+4. Round timer
+5. Win condition check
+6. End-of-match screen
+7. Return to lobby
+
+---
+
+## Phase 7 — Perks System
+
+**Goal:** Build diversity without breaking competitive integrity.
+
+### Steps
+1. Perk data structure: name, stat modifier, trade-off
+2. Selection screen pre-match
+3. Apply modifiers to relevant systems (movement, combat)
+4. Validate: no dominant strategy exists
+5. Ranked mode restriction rules (TBD)
+
+---
+
+## Phase 8 — Progression & UI
+
+**Goal:** Cosmetic rewards. No gameplay advantage.
+
+### Steps
+1. XP per match calculation
+2. Account level system
+3. Cosmetic unlock table
+4. In-game HUD (health, ammo, cooldowns)
+5. Kill feed
+6. Soft currency system
+7. Cosmetic application (skins, effects)

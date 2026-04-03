@@ -1,0 +1,101 @@
+-- CharacterController (LocalScript)
+-- Entry point for client-side movement.
+-- Wires InputHandler → StateManager → MovementResolver → PhysicsApplier each frame.
+
+local RunService      = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Players         = game:GetService("Players")
+
+local InputHandler    = require(script.InputHandler)
+local StateManager    = require(script.StateManager)
+local MovementResolver = require(script.MovementResolver)
+local PhysicsApplier  = require(script.PhysicsApplier)
+local Constants       = require(game.ReplicatedStorage.Shared.Constants.MovementConstants)
+
+local player  = Players.LocalPlayer
+local camera  = workspace.CurrentCamera
+
+-- Wait for character to be ready
+local character  = player.Character or player.CharacterAdded:Wait()
+local humanoid   = character:WaitForChild("Humanoid")
+local rootPart   = character:WaitForChild("HumanoidRootPart")
+
+-- Disable Roblox's default movement so our controller takes over
+humanoid.WalkSpeed  = 0
+humanoid.JumpPower  = 0
+humanoid.AutoRotate = false
+
+-- Initialize modules
+local stateManager   = StateManager.new()
+local physicsApplier = PhysicsApplier.new(rootPart)
+
+-- Jump state
+local jumpBuffered  = false
+local jumpCooldown  = false
+
+-- Ground detection via downward raycast
+local groundParams = RaycastParams.new()
+groundParams.FilterDescendantsInstances = { character }
+groundParams.FilterType = Enum.RaycastFilterType.Exclude
+
+local function checkGrounded()
+	local result = workspace:Raycast(
+		rootPart.Position,
+		Vector3.new(0, -Constants.GROUND_CHECK_DIST, 0),
+		groundParams
+	)
+	return result ~= nil
+end
+
+-- Smoothly rotate character toward movement direction
+local function faceMovementDirection(moveDirection)
+	if moveDirection.Magnitude == 0 then return end
+	local target = CFrame.lookAt(rootPart.Position, rootPart.Position + moveDirection)
+	rootPart.CFrame = rootPart.CFrame:Lerp(target, 0.25)
+end
+
+-- Buffer jump input so quick taps on landing still register
+UserInputService.InputBegan:Connect(function(input, processed)
+	if processed then return end
+	if input.KeyCode == Enum.KeyCode.Space then
+		jumpBuffered = true
+	end
+end)
+
+-- Main update loop
+local heartbeat = RunService.Heartbeat:Connect(function(dt)
+	local grounded = checkGrounded()
+
+	local input = {
+		moveDirection = InputHandler.getMoveDirection(camera),
+		isSprinting   = InputHandler.isSprinting(),
+	}
+
+	local state           = stateManager:update(input, grounded)
+	local currentVelocity = rootPart.AssemblyLinearVelocity
+	local horizontal      = MovementResolver.resolve(state, input, currentVelocity, dt)
+
+	physicsApplier:applyVelocity(horizontal)
+	faceMovementDirection(input.moveDirection)
+
+	-- Jump: only when grounded, buffered input, and not on cooldown
+	if jumpBuffered and grounded and not jumpCooldown then
+		physicsApplier:applyJump()
+		jumpBuffered = false
+		jumpCooldown = true
+		task.delay(0.2, function()
+			jumpCooldown = false
+		end)
+	end
+
+	-- Clear buffer if player left the ground without jumping (walked off edge)
+	if not grounded then
+		jumpBuffered = false
+	end
+end)
+
+-- Cleanup when character is removed (respawn)
+player.CharacterRemoving:Connect(function()
+	heartbeat:Disconnect()
+	physicsApplier:destroy()
+end)
