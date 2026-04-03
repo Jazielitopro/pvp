@@ -9,9 +9,15 @@ local PhysicsApplier = {}
 PhysicsApplier.__index = PhysicsApplier
 
 function PhysicsApplier.new(rootPart)
-	-- LinearVelocity requires an Attachment. RootRigAttachment exists by default on R15.
+	-- Use RootRigAttachment if it exists (R15 default).
+	-- If not (R6 or custom rig), create one at the root center.
 	local attachment = rootPart:FindFirstChild("RootRigAttachment")
-	assert(attachment, "PhysicsApplier: RootRigAttachment not found on HumanoidRootPart")
+	if not attachment then
+		attachment = Instance.new("Attachment")
+		attachment.Name     = "RootRigAttachment"
+		attachment.Position = Vector3.zero
+		attachment.Parent   = rootPart
+	end
 
 	local lv = Instance.new("LinearVelocity")
 	lv.Attachment0           = attachment

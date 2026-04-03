@@ -28,14 +28,20 @@ humanoid.WalkSpeed  = 0
 humanoid.JumpPower  = 0
 humanoid.AutoRotate = false
 
--- Wait for RemoteEvents created by RemoteSetup on the server
-local remotes         = game.ReplicatedStorage:WaitForChild("Remotes")
-local dashRequest     = remotes:WaitForChild("DashRequest")
-
--- Initialize modules
+-- Initialize modules — movement starts immediately, no blocking calls
 local stateManager      = StateManager.new()
 local physicsApplier    = PhysicsApplier.new(rootPart)
-local dashHandler       = DashHandler.new(physicsApplier, dashRequest)
+local dashHandler       = DashHandler.new(physicsApplier, nil) -- remote set async below
+
+-- Connect dash remote asynchronously so it never blocks movement startup
+task.spawn(function()
+	local remotes = game.ReplicatedStorage:WaitForChild("Remotes", 10)
+	if not remotes then return end
+	local remote = remotes:WaitForChild("DashRequest", 10)
+	if remote then
+		dashHandler:setRemote(remote)
+	end
+end)
 local slideHandler      = SlideHandler.new()
 local cameraController  = CameraController.new(camera, humanoid)
 
@@ -141,6 +147,8 @@ local heartbeat = RunService.Heartbeat:Connect(function(dt)
 
 	-- Jump: only when grounded, buffered input, and not on cooldown
 	if jumpBuffered and grounded and not jumpCooldown then
+		-- Exit Humanoid grounded state first — otherwise JumpPower=0 clamps Y velocity
+		humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
 		physicsApplier:applyJump()
 		jumpBuffered = false
 		jumpCooldown = true
