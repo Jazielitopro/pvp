@@ -41,6 +41,17 @@ function PhysicsApplier:applyJump()
 	)
 end
 
+-- Apply horizontal dash burst while preserving current vertical velocity.
+-- Direction must be a unit Vector3 on the XZ plane.
+function PhysicsApplier:applyDash(direction)
+	local current = self._root.AssemblyLinearVelocity
+	self._root.AssemblyLinearVelocity = Vector3.new(
+		direction.X * Constants.DASH_SPEED,
+		current.Y,
+		direction.Z * Constants.DASH_SPEED
+	)
+end
+
 function PhysicsApplier:destroy()
 	self._lv:Destroy()
 end
