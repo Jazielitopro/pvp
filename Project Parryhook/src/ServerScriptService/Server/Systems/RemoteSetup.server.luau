@@ -39,3 +39,12 @@ playerDied.Parent = remotes
 local hitConfirmed = Instance.new("RemoteEvent")
 hitConfirmed.Name   = "HitConfirmed"   -- fired to attacker: (wasKill, victimName)
 hitConfirmed.Parent = remotes
+
+-- Projectile — Phase 3
+local spawnProjectile = Instance.new("RemoteEvent")
+spawnProjectile.Name   = "SpawnProjectile"  -- server → all: (id, ownerId, origin, dir, speed)
+spawnProjectile.Parent = remotes
+
+local impactEffect = Instance.new("RemoteEvent")
+impactEffect.Name   = "ImpactEffect"        -- server → all: (position, normal, isKill)
+impactEffect.Parent = remotes

@@ -10,4 +10,8 @@ return {
 	-- Damage (chunk model — fixed per-hit, no spread)
 	-- 3 hits to kill at 100 HP: 34 × 3 = 102 (third shot always kills)
 	DAMAGE_PER_HIT = 34,
+
+	-- Projectile — Phase 3
+	BULLET_SPEED    = 250,  -- studs per second (fast but visible)
+	BULLET_LIFETIME = 3.5,  -- seconds before auto-destroy (~875 stud max range)
 }

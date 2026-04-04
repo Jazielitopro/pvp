@@ -5,8 +5,9 @@
 -- Phase 2 scope: ammo counter, fire validation, reload timer.
 -- Phase 3 will add: ProjectileSpawner call inside onFire().
 
-local Players  = game:GetService("Players")
-local Constants = require(game.ReplicatedStorage.Shared.Constants.WeaponConstants)
+local Players           = game:GetService("Players")
+local Constants         = require(game.ReplicatedStorage.Shared.Constants.WeaponConstants)
+local ProjectileSpawner = require(script.Parent.ProjectileSpawner)
 
 local remotes       = game.ReplicatedStorage:WaitForChild("Remotes")
 local fireRequest   = remotes:WaitForChild("FireRequest")
@@ -35,13 +36,15 @@ end
 
 -- ── Fire ──────────────────────────────────────────────────────────────────────
 
-fireRequest.OnServerEvent:Connect(function(player)
+-- direction is the client's camera LookVector (unit Vector3).
+-- ProjectileSpawner validates it before use.
+fireRequest.OnServerEvent:Connect(function(player, direction)
 	local s   = getState(player)
 	local now = os.clock()
 
 	-- Validation
-	if s.isReloading                              then return end
-	if s.ammo <= 0                                then return end
+	if s.isReloading                                   then return end
+	if s.ammo <= 0                                     then return end
 	if (now - s.lastFireTime) < Constants.FIRE_COOLDOWN then return end
 
 	-- Consume one bullet
@@ -50,9 +53,8 @@ fireRequest.OnServerEvent:Connect(function(player)
 
 	syncAmmo(player)
 
-	-- ── Phase 3 hook ─────────────────────────────────────────────────────
-	-- ProjectileSpawner.onFire(player) will be called here.
-	-- ─────────────────────────────────────────────────────────────────────
+	-- Spawn projectile — Phase 3
+	ProjectileSpawner.onFire(player, direction)
 end)
 
 -- ── Reload ────────────────────────────────────────────────────────────────────

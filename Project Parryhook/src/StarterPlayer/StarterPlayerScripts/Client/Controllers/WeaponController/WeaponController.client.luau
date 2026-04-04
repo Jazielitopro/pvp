@@ -12,6 +12,7 @@
 
 local UserInputService = game:GetService("UserInputService")
 local Players          = game:GetService("Players")
+local Workspace        = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 
@@ -41,7 +42,9 @@ UserInputService.InputBegan:Connect(function(input, processed)
 			return
 		end
 
-		fireRequest:FireServer()
+		-- Send the exact camera look direction so the server can spawn the projectile.
+		local direction = Workspace.CurrentCamera.CFrame.LookVector
+		fireRequest:FireServer(direction)
 	end
 
 	-- Manual reload
