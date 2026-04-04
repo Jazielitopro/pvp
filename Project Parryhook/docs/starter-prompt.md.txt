@@ -82,12 +82,12 @@ Update this as each step is completed.
 
 | Phase | Step | Status |
 |---|---|---|
-| 1 — Movement | 1. Basic character controller | pending |
-| 1 — Movement | 2. Dash | pending |
-| 1 — Movement | 3. Slide | pending |
-| 1 — Movement | 4. First-person camera | pending |
-| 1 — Movement | 5. Validate hit registration at speed | pending |
-| 1 — Movement | 6. Validate readability to other players | pending |
+| 1 — Movement | 1. Basic character controller | ✅ done |
+| 1 — Movement | 2. Dash | ✅ done |
+| 1 — Movement | 3. Slide | ✅ done |
+| 1 — Movement | 4. First-person camera | ✅ done |
+| 1 — Movement | 5. Validate hit registration at speed | ⚠️ test locally |
+| 1 — Movement | 6. Validate readability to other players | ⚠️ test locally |
 | 2 — Combat | 1. Server-side ammo counter | pending |
 | 2 — Combat | 2. Fire request pipeline | pending |
 | 2 — Combat | 3. Revolver stats | pending |
