@@ -3,17 +3,19 @@
 -- Step 1 states: IDLE, WALKING, SPRINTING, AIRBORNE
 -- Step 2 adds:   DASHING
 -- Step 3 adds:   SLIDING
+-- Phase 4 adds:  GRAPPLING
 --
 -- Priority order (highest to lowest):
---   DASHING → SLIDING → AIRBORNE → SPRINTING → WALKING → IDLE
+--   DASHING → GRAPPLING → SLIDING → AIRBORNE → SPRINTING → WALKING → IDLE
 
 local States = {
-	IDLE      = "idle",
-	WALKING   = "walking",
-	SPRINTING = "sprinting",
-	AIRBORNE  = "airborne",
-	DASHING   = "dashing",
-	SLIDING   = "sliding",
+	IDLE       = "idle",
+	WALKING    = "walking",
+	SPRINTING  = "sprinting",
+	AIRBORNE   = "airborne",
+	DASHING    = "dashing",
+	SLIDING    = "sliding",
+	GRAPPLING  = "grappling",
 }
 
 local StateManager = {}
@@ -33,9 +35,14 @@ function StateManager:update(input, isGrounded)
 	self._wasGrounded = self._grounded
 	self._grounded    = isGrounded
 
-	-- Priority: DASHING → SLIDING → AIRBORNE → ground states
+	-- Priority: DASHING → GRAPPLING → SLIDING → AIRBORNE → ground states
 	if input.isDashing then
 		self.current = States.DASHING
+		return self.current
+	end
+
+	if input.isGrappling then
+		self.current = States.GRAPPLING
 		return self.current
 	end
 

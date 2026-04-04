@@ -17,6 +17,12 @@ function MovementResolver.resolve(state, input, currentVelocity, dt)
 		return input.dashDirection * Constants.DASH_SPEED
 	end
 
+	-- During grapple: GrappleHandler owns AssemblyLinearVelocity directly.
+	-- Return zero so PhysicsApplier doesn't fight the grapple pull.
+	if state == States.GRAPPLING then
+		return Vector3.zero
+	end
+
 	-- During slide: decelerate linearly from SLIDE_SPEED_START to SLIDE_SPEED_END.
 	-- Direction is locked. Player cannot steer during a slide.
 	if state == States.SLIDING then
