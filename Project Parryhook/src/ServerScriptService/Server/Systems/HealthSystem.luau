@@ -11,6 +11,7 @@ local Constants     = require(game.ReplicatedStorage.Shared.Constants.HealthCons
 local remotes       = game.ReplicatedStorage:WaitForChild("Remotes")
 local healthUpdated = remotes:WaitForChild("HealthUpdated")
 local playerDied    = remotes:WaitForChild("PlayerDied")
+local hitConfirmed  = remotes:WaitForChild("HitConfirmed")
 
 -- [Player] = { hp, isDead, regenThread }
 local state = {}
@@ -71,20 +72,26 @@ function HealthSystem.takeDamage(victim, attacker, amount)
 	s.hp = math.max(s.hp - amount, 0)
 	syncHealth(victim)
 
-	if s.hp <= 0 then
+	local isKill = s.hp <= 0
+
+	if isKill then
 		s.isDead = true
 		playerDied:FireAllClients(victim, attacker)
-
 		task.delay(3, function()
 			if state[victim] then
 				victim:LoadCharacter()
 			end
 		end)
-		return true
+	else
+		startRegen(victim)
 	end
 
-	startRegen(victim)
-	return false
+	-- Notify attacker: hit landed (wasKill, victim display name)
+	if attacker then
+		hitConfirmed:FireClient(attacker, isKill, victim.DisplayName)
+	end
+
+	return isKill
 end
 
 function HealthSystem.getHP(player)

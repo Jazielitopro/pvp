@@ -34,3 +34,8 @@ healthUpdated.Parent = remotes
 local playerDied = Instance.new("RemoteEvent")
 playerDied.Name   = "PlayerDied"
 playerDied.Parent = remotes
+
+-- Combat feedback — Phase 2 (Steps 6-7)
+local hitConfirmed = Instance.new("RemoteEvent")
+hitConfirmed.Name   = "HitConfirmed"   -- fired to attacker: (wasKill, victimName)
+hitConfirmed.Parent = remotes
