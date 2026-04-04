@@ -25,3 +25,12 @@ reloadRequest.Parent = remotes
 local ammoUpdated = Instance.new("RemoteEvent")
 ammoUpdated.Name   = "AmmoUpdated"
 ammoUpdated.Parent = remotes
+
+-- Health — Phase 2
+local healthUpdated = Instance.new("RemoteEvent")
+healthUpdated.Name   = "HealthUpdated"
+healthUpdated.Parent = remotes
+
+local playerDied = Instance.new("RemoteEvent")
+playerDied.Name   = "PlayerDied"
+playerDied.Parent = remotes
