@@ -18,10 +18,12 @@ local SLIDE_ENTER_INFO = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingD
 local SLIDE_EXIT_INFO  = TweenInfo.new(0.20, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local DASH_LEAN_INFO   = TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local DASH_RETURN_INFO = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local DEATH_ENTER_INFO = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 -- Pitch angles
 local SLIDE_PITCH = math.rad(-22) -- forward lean during slide
 local DASH_PITCH  = math.rad(-14) -- brief forward lean on dash start
+local DEATH_ROLL  = math.rad(88)  -- fall sideways on death
 
 -- ─────────────────────────────────────────────────────────────────────────────
 
@@ -83,6 +85,14 @@ function AnimationHandler:update(state)
 			if self._dashTween then self._dashTween:Play() end
 		end)
 	end
+end
+
+-- Play death fall pose. Called by HealthController when local player dies.
+-- The fade-to-black covers the end of the tween so the transition is clean.
+function AnimationHandler:playDeath()
+	if not self._joint then return end
+	local deathC0 = self._defaultC0 * CFrame.Angles(0, 0, DEATH_ROLL)
+	TweenService:Create(self._joint, DEATH_ENTER_INFO, { C0 = deathC0 }):Play()
 end
 
 -- Reset character to default pose (call on cleanup / respawn).

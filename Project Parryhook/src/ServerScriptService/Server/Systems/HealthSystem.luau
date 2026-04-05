@@ -116,8 +116,12 @@ function HealthSystem.init()
 			s.hp     = Constants.MAX_HEALTH
 			s.isDead = false
 
-			task.wait(0.5)
+			-- Wait longer so client LocalScripts finish loading before the
+			-- first sync is sent. 0.5s was too short for Player 2+ in Team Test.
+			task.wait(2)
 			syncHealth(player)
+			print(string.format("[HealthSystem] Synced HP for %s (%.0f / %.0f)",
+				player.Name, s.hp, Constants.MAX_HEALTH))
 		end)
 	end)
 

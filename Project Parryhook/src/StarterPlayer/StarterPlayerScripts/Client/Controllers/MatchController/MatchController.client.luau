@@ -23,9 +23,14 @@ local playerDied   = remotes:WaitForChild("PlayerDied")
 local MatchConstants = require(game.ReplicatedStorage.Shared.Constants.MatchConstants)
 local HUD            = require(game.ReplicatedStorage.Client.HUD)
 
--- Diagnostic: confirm HUD functions loaded correctly
+-- ── Startup diagnostics ───────────────────────────────────────────────────────
+
+print("[MatchController] Initialized for", player.Name)
+
 if typeof(HUD.setScores) ~= "function" then
 	warn("[MatchController] HUD.setScores is missing — paste HUD.luau content into Studio")
+else
+	print("[MatchController] HUD.setScores OK")
 end
 
 -- ── Local score mirror ────────────────────────────────────────────────────────
@@ -123,7 +128,12 @@ end
 
 scoreUpdated.OnClientEvent:Connect(function(scoreList)
 	localScores = scoreList
-	if HUD.setScores then HUD.setScores(scoreList) end
+	print(string.format("[MatchController] Score update — %d players", #scoreList))
+	if HUD.setScores then
+		HUD.setScores(scoreList)
+	else
+		warn("[MatchController] HUD.setScores still nil — HUD module not loaded")
+	end
 end)
 
 matchStarted.OnClientEvent:Connect(function()

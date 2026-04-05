@@ -1,6 +1,11 @@
 -- HealthController (LocalScript)
--- Mirrors server HP locally. Handles death fade-to-black + respawn fade-in.
--- Phase 8 will replace print() calls with proper HUD health bar.
+-- Mirrors server HP locally. Handles death animation + fade-to-black + respawn fade-in.
+--
+-- Death sequence:
+--   1. playerDied fires → freeze humanoid movement
+--   2. RootJoint tweens to a sideways fall pose (0.35 s)
+--   3. Screen fades to black (0.6 s, overlapping the pose)
+--   4. Server respawns character after 3 s → CharacterAdded fires → fade clear
 
 local TweenService = game:GetService("TweenService")
 local Players      = game:GetService("Players")
@@ -16,9 +21,14 @@ local HealthConstants = require(game.ReplicatedStorage.Shared.Constants.HealthCo
 local SoundManager    = require(game.ReplicatedStorage.Client.SoundManager)
 local HUD             = require(game.ReplicatedStorage.Client.HUD)
 
--- Diagnostic: confirm HUD functions loaded correctly
+-- ── Startup diagnostics ───────────────────────────────────────────────────────
+
+print("[HealthController] Initialized for", player.Name)
+
 if typeof(HUD.setHP) ~= "function" then
 	warn("[HealthController] HUD.setHP is missing — paste HUD.luau content into Studio")
+else
+	print("[HealthController] HUD.setHP OK")
 end
 
 -- Local HP mirror (display only)
@@ -49,7 +59,7 @@ local function fadeOut()   -- black → clear
 	TweenService:Create(fadeFrame, FADE_TO_CLEAR, { BackgroundTransparency = 1 }):Play()
 end
 
-local function fadeIn(callback)   -- clear → black → callback
+local function fadeIn(callback)   -- clear → black
 	local tw = TweenService:Create(fadeFrame, FADE_TO_BLACK, { BackgroundTransparency = 0 })
 	tw:Play()
 	if callback then
@@ -57,10 +67,40 @@ local function fadeIn(callback)   -- clear → black → callback
 	end
 end
 
+-- ── Death animation ───────────────────────────────────────────────────────────
+-- Tweens the RootJoint sideways to simulate falling over.
+-- Works without any Animation asset IDs.
+
+local DEATH_TWEEN   = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local DEATH_DELAY   = 0.25   -- seconds before fade starts, so pose is visible briefly
+
+local function playDeathAnimation()
+	local char = player.Character
+	if not char then return end
+
+	-- Freeze character movement
+	local humanoid = char:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.WalkSpeed = 0
+		humanoid.JumpPower = 0
+	end
+
+	-- Tilt RootJoint to fall-sideways pose
+	local rootPart  = char:FindFirstChild("HumanoidRootPart")
+	local rootJoint = rootPart and rootPart:FindFirstChild("RootJoint")
+	if rootJoint then
+		local fallC0 = rootJoint.C0 * CFrame.Angles(0, 0, math.rad(88))
+		TweenService:Create(rootJoint, DEATH_TWEEN, { C0 = fallC0 }):Play()
+	else
+		warn("[HealthController] RootJoint not found — death pose skipped")
+	end
+end
+
 -- ── Respawn detection: fade back in when character respawns ───────────────────
 
 player.CharacterAdded:Connect(function()
-	-- Wait one frame for the character to load, then fade back in
+	print("[HealthController] Character respawned —", player.Name)
+	-- Wait one frame for the character to fully load, then fade in
 	task.wait(0.1)
 	fadeOut()
 end)
@@ -69,18 +109,29 @@ end)
 
 healthUpdated.OnClientEvent:Connect(function(hp, maxHp)
 	currentHP = hp
-	if HUD.setHP then HUD.setHP(hp, maxHp) end
+	print(string.format("[HealthController] HP update → %.0f / %.0f", hp, maxHp))
+	if HUD.setHP then
+		HUD.setHP(hp, maxHp)
+	else
+		warn("[HealthController] HUD.setHP still nil — HUD module not loaded")
+	end
 end)
 
 playerDied.OnClientEvent:Connect(function(victim, attacker)
 	if victim == player then
-		-- Fade to black on death; respawn will trigger CharacterAdded → fadeOut
-		fadeIn()
-		print("[Health] You died.")
+		print("[HealthController] You died — playing death animation")
+		-- 1. Play death pose
+		playDeathAnimation()
+		-- 2. Short pause so the pose is visible, then fade to black
+		task.delay(DEATH_DELAY, function()
+			fadeIn()
+		end)
+
 	elseif attacker == player then
-		print(string.format("[Health] You killed %s", victim.DisplayName))
+		print(string.format("[HealthController] You killed %s", victim.DisplayName))
+
 	else
-		print(string.format("[Health] %s was eliminated by %s",
+		print(string.format("[HealthController] %s was eliminated by %s",
 			victim.DisplayName,
 			attacker and attacker.DisplayName or "the environment"))
 	end
