@@ -62,6 +62,11 @@ end
 
 local HealthSystem = {}
 
+-- Server-side kill signal. MatchManager subscribes to this.
+-- Fired with (victim: Player, attacker: Player | nil) on every lethal hit.
+-- BindableEvent is safe for server-to-server communication without remotes.
+HealthSystem.KillBind = Instance.new("BindableEvent")
+
 -- Returns true if the hit was lethal.
 function HealthSystem.takeDamage(victim, attacker, amount)
 	local s = getState(victim)
@@ -77,6 +82,7 @@ function HealthSystem.takeDamage(victim, attacker, amount)
 	if isKill then
 		s.isDead = true
 		playerDied:FireAllClients(victim, attacker)
+		HealthSystem.KillBind:Fire(victim, attacker)   -- Phase 6: MatchManager listens here
 		task.delay(3, function()
 			if state[victim] then
 				victim:LoadCharacter()
