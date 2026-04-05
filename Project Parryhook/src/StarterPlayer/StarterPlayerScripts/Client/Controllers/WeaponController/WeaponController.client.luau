@@ -28,6 +28,11 @@ local SoundManager    = require(game.ReplicatedStorage.Client.SoundManager)
 local ScreenEffects   = require(game.ReplicatedStorage.Client.ScreenEffects)
 local HUD             = require(game.ReplicatedStorage.Client.HUD)
 
+-- Diagnostic: confirm HUD functions loaded correctly
+if typeof(HUD.setAmmo) ~= "function" then
+	warn("[WeaponController] HUD.setAmmo is missing — paste HUD.luau content into Studio")
+end
+
 -- ── Muzzle flash UI ───────────────────────────────────────────────────────────
 -- Screen-space burst of light at the bottom-center, simulating gun discharge.
 
@@ -109,5 +114,5 @@ end)
 ammoUpdated.OnClientEvent:Connect(function(ammo, reloading)
 	currentAmmo = ammo
 	isReloading = reloading
-	HUD.setAmmo(ammo, WeaponConstants.MAX_AMMO, reloading)
+	if HUD.setAmmo then HUD.setAmmo(ammo, WeaponConstants.MAX_AMMO, reloading) end
 end)
