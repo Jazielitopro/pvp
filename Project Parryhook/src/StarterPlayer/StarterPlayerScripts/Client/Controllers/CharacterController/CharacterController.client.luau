@@ -20,10 +20,16 @@ local Constants         = require(game.ReplicatedStorage.Shared.Constants.Moveme
 local player  = Players.LocalPlayer
 local camera  = workspace.CurrentCamera
 
--- Wait for character to be ready
+-- Wait for character to be fully ready (including RootPart and RootJoint)
 local character  = player.Character or player.CharacterAdded:Wait()
 local humanoid   = character:WaitForChild("Humanoid")
 local rootPart   = character:WaitForChild("HumanoidRootPart")
+
+-- Wait for RootJoint to exist so AnimationHandler can find it
+-- (in R15 it is a Motor6D inside HumanoidRootPart)
+if not rootPart:FindFirstChild("RootJoint") then
+	rootPart.ChildAdded:Wait()
+end
 
 -- Disable auto-rotation and jump — PhysicsApplier manages both dynamically
 humanoid.JumpPower  = 0

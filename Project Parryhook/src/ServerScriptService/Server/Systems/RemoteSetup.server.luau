@@ -75,3 +75,8 @@ spawnProjectile.Parent = remotes
 local impactEffect = Instance.new("RemoteEvent")
 impactEffect.Name   = "ImpactEffect"        -- server → all: (position, normal, isKill)
 impactEffect.Parent = remotes
+
+-- Intermission countdown
+local intermissionTick = Instance.new("RemoteEvent")
+intermissionTick.Name   = "IntermissionTick"  -- server → all: (secondsLeft: number)
+intermissionTick.Parent = remotes

@@ -2,34 +2,39 @@
 -- Drives the match state machine and score tracking.
 --
 -- States:
---   WAITING  — fewer than MIN_PLAYERS connected; no match running
---   ACTIVE   — match in progress; kill tracking + timer active
---   ENDED    — winner found or timer expired; brief cooldown before reset
+--   WAITING      — fewer than MIN_PLAYERS connected; loop polls every second
+--   INTERMISSION — between rounds; countdown fires IntermissionTick to clients
+--   ACTIVE       — match in progress; kill tracking + optional timer
+--   ENDED        — winner found or timer expired; brief winner screen, then
+--                  transitions to INTERMISSION (or WAITING if players left)
 --
 -- Kill signal: listens to HealthSystem.KillBind (BindableEvent) so it never
--- needs to parse RemoteEvents or depend on client trust.
+-- depends on client trust.
 
 local Players      = game:GetService("Players")
 local HealthSystem = require(script.Parent.HealthSystem)
 local Constants    = require(game.ReplicatedStorage.Shared.Constants.MatchConstants)
 
-local remotes      = game.ReplicatedStorage:WaitForChild("Remotes")
-local scoreUpdated = remotes:WaitForChild("ScoreUpdated")
-local matchStarted = remotes:WaitForChild("MatchStarted")
-local matchEnded   = remotes:WaitForChild("MatchEnded")
-local playerDied   = remotes:WaitForChild("PlayerDied")  -- reused for kill-feed broadcast
+local remotes          = game.ReplicatedStorage:WaitForChild("Remotes")
+local scoreUpdated     = remotes:WaitForChild("ScoreUpdated")
+local matchStarted     = remotes:WaitForChild("MatchStarted")
+local matchEnded       = remotes:WaitForChild("MatchEnded")
+local playerDied       = remotes:WaitForChild("PlayerDied")
+local intermissionTick = remotes:WaitForChild("IntermissionTick")
 
 -- ── State ─────────────────────────────────────────────────────────────────────
 
-local WAITING = "WAITING"
-local ACTIVE  = "ACTIVE"
-local ENDED   = "ENDED"
+local WAITING      = "WAITING"
+local INTERMISSION = "INTERMISSION"
+local ACTIVE       = "ACTIVE"
+local ENDED        = "ENDED"
 
-local matchState   = WAITING
-local scores       = {}   -- [userId] = killCount
-local timerThread  = nil  -- task thread for round timer
+local matchState          = WAITING
+local scores              = {}   -- [userId] = killCount
+local timerThread         = nil  -- task thread for round timer
+local intermissionThread  = nil  -- task thread for countdown
 
--- ── Helpers ───────────────────────────────────────────────────────────────────
+-- ── Score helpers ─────────────────────────────────────────────────────────────
 
 local function buildScoreList()
 	local list = {}
@@ -55,11 +60,18 @@ local function resetScores()
 	end
 end
 
+-- ── Forward declarations ──────────────────────────────────────────────────────
+
+local startIntermission  -- declared here, defined below
+local endMatch
+
 -- ── Match lifecycle ───────────────────────────────────────────────────────────
 
 local function startMatch()
 	if matchState == ACTIVE then return end
 	matchState = ACTIVE
+	if intermissionThread then task.cancel(intermissionThread); intermissionThread = nil end
+
 	resetScores()
 	broadcastScores()
 	matchStarted:FireAllClients()
@@ -71,7 +83,7 @@ local function startMatch()
 		timerThread = task.delay(Constants.ROUND_DURATION, function()
 			if matchState ~= ACTIVE then return end
 			-- Time expired — most kills wins
-			local winner = nil
+			local winner  = nil
 			local topKills = -1
 			for _, player in ipairs(Players:GetPlayers()) do
 				local k = scores[player.UserId] or 0
@@ -85,7 +97,7 @@ local function startMatch()
 	end
 end
 
-function endMatch(winner, reason)
+endMatch = function(winner, reason)
 	if matchState == ENDED then return end
 	matchState = ENDED
 	if timerThread then task.cancel(timerThread); timerThread = nil end
@@ -96,13 +108,38 @@ function endMatch(winner, reason)
 	matchEnded:FireAllClients(winnerName, scoreList)
 	print(string.format("[MatchManager] Match ended (%s). Winner: %s", reason or "kill limit", winnerName))
 
-	-- Reset after delay and restart if enough players
+	-- Show winner screen for END_RESET_DELAY seconds, then go to intermission
 	task.delay(Constants.END_RESET_DELAY, function()
+		if matchState ~= ENDED then return end
+		if #Players:GetPlayers() >= Constants.MIN_PLAYERS then
+			startIntermission()
+		else
+			matchState = WAITING
+			print("[MatchManager] Waiting for players...")
+		end
+	end)
+end
+
+startIntermission = function()
+	if matchState == INTERMISSION or matchState == ACTIVE then return end
+	matchState = INTERMISSION
+	print(string.format("[MatchManager] Intermission started (%ds).", Constants.INTERMISSION_DURATION))
+
+	intermissionThread = task.spawn(function()
+		for i = Constants.INTERMISSION_DURATION, 1, -1 do
+			if matchState ~= INTERMISSION then return end
+			intermissionTick:FireAllClients(i)
+			print(string.format("[MatchManager] Intermission: %d", i))
+			task.wait(1)
+		end
+
+		if matchState ~= INTERMISSION then return end
+
 		if #Players:GetPlayers() >= Constants.MIN_PLAYERS then
 			startMatch()
 		else
 			matchState = WAITING
-			print("[MatchManager] Waiting for players...")
+			print("[MatchManager] Not enough players after intermission. Waiting...")
 		end
 	end)
 end
@@ -122,9 +159,10 @@ end
 HealthSystem.KillBind.Event:Connect(function(victim, attacker)
 	if matchState ~= ACTIVE then return end
 
-	-- Credit kill to attacker (nil = suicide / environmental)
 	if attacker and attacker ~= victim then
 		scores[attacker.UserId] = (scores[attacker.UserId] or 0) + 1
+		print(string.format("[MatchManager] Kill: %s → %s (kills: %d)",
+			attacker.DisplayName, victim.DisplayName, scores[attacker.UserId]))
 	end
 
 	broadcastScores()
@@ -135,12 +173,14 @@ end)
 
 Players.PlayerAdded:Connect(function(player)
 	scores[player.UserId] = 0
+	print(string.format("[MatchManager] Player joined: %s (total: %d, state: %s)",
+		player.Name, #Players:GetPlayers(), matchState))
 
-	-- Try to start match when we hit MIN_PLAYERS
+	-- Start intermission as soon as we hit MIN_PLAYERS (from WAITING)
 	if matchState == WAITING and #Players:GetPlayers() >= Constants.MIN_PLAYERS then
-		task.wait(3)  -- brief grace period for late joiners to load
+		task.wait(2)  -- brief grace period for the new player to finish loading
 		if matchState == WAITING then
-			startMatch()
+			startIntermission()
 		end
 	end
 
@@ -151,11 +191,20 @@ end)
 
 Players.PlayerRemoving:Connect(function(player)
 	scores[player.UserId] = nil
+	local remaining = #Players:GetPlayers() - 1
+	print(string.format("[MatchManager] Player left: %s (remaining: %d, state: %s)",
+		player.Name, remaining, matchState))
 
-	-- Drop back to WAITING if too few players remain
-	if matchState == ACTIVE and #Players:GetPlayers() - 1 < Constants.MIN_PLAYERS then
-		if timerThread then task.cancel(timerThread); timerThread = nil end
-		matchState = WAITING
-		print("[MatchManager] Not enough players. Waiting...")
+	if remaining < Constants.MIN_PLAYERS then
+		-- Not enough players — abort whatever is running
+		if matchState == ACTIVE then
+			if timerThread then task.cancel(timerThread); timerThread = nil end
+			matchState = WAITING
+			print("[MatchManager] Not enough players. Waiting...")
+		elseif matchState == INTERMISSION then
+			if intermissionThread then task.cancel(intermissionThread); intermissionThread = nil end
+			matchState = WAITING
+			print("[MatchManager] Intermission cancelled — not enough players. Waiting...")
+		end
 	end
 end)
