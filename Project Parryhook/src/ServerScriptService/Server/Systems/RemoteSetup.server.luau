@@ -45,6 +45,19 @@ local grappleRequest = Instance.new("RemoteEvent")
 grappleRequest.Name   = "GrappleRequest"  -- client → server: (attachPoint: Vector3)
 grappleRequest.Parent = remotes
 
+-- Match — Phase 6
+local scoreUpdated = Instance.new("RemoteEvent")
+scoreUpdated.Name   = "ScoreUpdated"   -- server → all: array of {userId,name,kills}
+scoreUpdated.Parent = remotes
+
+local matchStarted = Instance.new("RemoteEvent")
+matchStarted.Name   = "MatchStarted"   -- server → all: ()
+matchStarted.Parent = remotes
+
+local matchEnded = Instance.new("RemoteEvent")
+matchEnded.Name   = "MatchEnded"       -- server → all: (winnerName: string, scores: array)
+matchEnded.Parent = remotes
+
 -- Parry — Phase 5
 local parryRequest = Instance.new("RemoteEvent")
 parryRequest.Name   = "ParryRequest"  -- client → server: (clientTimestamp: number)
