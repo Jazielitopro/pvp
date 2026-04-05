@@ -14,11 +14,12 @@ local TweenService = game:GetService("TweenService")
 local player   = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
-local remotes      = game.ReplicatedStorage:WaitForChild("Remotes")
-local scoreUpdated = remotes:WaitForChild("ScoreUpdated")
-local matchStarted = remotes:WaitForChild("MatchStarted")
-local matchEnded   = remotes:WaitForChild("MatchEnded")
-local playerDied   = remotes:WaitForChild("PlayerDied")
+local remotes          = game.ReplicatedStorage:WaitForChild("Remotes")
+local scoreUpdated     = remotes:WaitForChild("ScoreUpdated")
+local matchStarted     = remotes:WaitForChild("MatchStarted")
+local matchEnded       = remotes:WaitForChild("MatchEnded")
+local playerDied       = remotes:WaitForChild("PlayerDied")
+local intermissionTick = remotes:WaitForChild("IntermissionTick")
 
 local MatchConstants = require(game.ReplicatedStorage.Shared.Constants.MatchConstants)
 local HUD            = require(game.ReplicatedStorage.Client.HUD)
@@ -37,9 +38,7 @@ end
 
 local localScores = {}   -- sorted array kept in sync with server
 
--- ── Announcement UI ───────────────────────────────────────────────────────────
--- Simple center-screen label for match start / end announcements.
--- Phase 8: replace with polished HUD.
+-- ── Match UI ──────────────────────────────────────────────────────────────────
 
 local gui = Instance.new("ScreenGui")
 gui.Name            = "MatchUI"
@@ -48,11 +47,12 @@ gui.IgnoreGuiInset  = true
 gui.ZIndexBehavior  = Enum.ZIndexBehavior.Sibling
 gui.Parent          = playerGui
 
+-- Announcement label (FIGHT! / "X wins!")
 local announceLbl = Instance.new("TextLabel")
 announceLbl.Name                 = "Announce"
 announceLbl.Size                 = UDim2.new(0, 500, 0, 60)
-announceLbl.AnchorPoint          = Vector2.new(0.5, 0.2)
-announceLbl.Position             = UDim2.new(0.5, 0, 0.18, 0)
+announceLbl.AnchorPoint          = Vector2.new(0.5, 0.5)
+announceLbl.Position             = UDim2.new(0.5, 0, 0.22, 0)
 announceLbl.BackgroundTransparency = 1
 announceLbl.TextColor3           = Color3.new(1, 1, 1)
 announceLbl.TextScaled           = true
@@ -61,6 +61,44 @@ announceLbl.Text                 = ""
 announceLbl.TextTransparency     = 1
 announceLbl.ZIndex               = 25
 announceLbl.Parent               = gui
+
+-- Intermission panel (center of screen, shown during countdown)
+local intermissionPanel = Instance.new("Frame")
+intermissionPanel.Name                   = "IntermissionPanel"
+intermissionPanel.Size                   = UDim2.new(0, 320, 0, 90)
+intermissionPanel.AnchorPoint            = Vector2.new(0.5, 0.5)
+intermissionPanel.Position               = UDim2.new(0.5, 0, 0.5, 0)
+intermissionPanel.BackgroundColor3       = Color3.fromRGB(12, 12, 12)
+intermissionPanel.BackgroundTransparency = 0.35
+intermissionPanel.BorderSizePixel        = 0
+intermissionPanel.ZIndex                 = 26
+intermissionPanel.Visible                = false
+intermissionPanel.Parent                 = gui
+local ipCorner = Instance.new("UICorner")
+ipCorner.CornerRadius = UDim.new(0, 10)
+ipCorner.Parent = intermissionPanel
+
+local intermissionTitle = Instance.new("TextLabel")
+intermissionTitle.Size                   = UDim2.new(1, 0, 0.45, 0)
+intermissionTitle.Position               = UDim2.new(0, 0, 0, 0)
+intermissionTitle.BackgroundTransparency = 1
+intermissionTitle.TextColor3             = Color3.fromRGB(180, 180, 180)
+intermissionTitle.TextScaled             = true
+intermissionTitle.Font                   = Enum.Font.Gotham
+intermissionTitle.Text                   = "NEXT ROUND IN"
+intermissionTitle.ZIndex                 = 27
+intermissionTitle.Parent                 = intermissionPanel
+
+local intermissionCountdown = Instance.new("TextLabel")
+intermissionCountdown.Size                   = UDim2.new(1, 0, 0.55, 0)
+intermissionCountdown.Position               = UDim2.new(0, 0, 0.45, 0)
+intermissionCountdown.BackgroundTransparency = 1
+intermissionCountdown.TextColor3             = Color3.fromRGB(255, 210, 60)
+intermissionCountdown.TextScaled             = true
+intermissionCountdown.Font                   = Enum.Font.GothamBold
+intermissionCountdown.Text                   = "15"
+intermissionCountdown.ZIndex                 = 27
+intermissionCountdown.Parent                 = intermissionPanel
 
 local FADE_IN  = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local FADE_OUT = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
@@ -137,8 +175,10 @@ scoreUpdated.OnClientEvent:Connect(function(scoreList)
 end)
 
 matchStarted.OnClientEvent:Connect(function()
+	-- Hide intermission panel immediately when round starts
+	intermissionPanel.Visible = false
 	showAnnouncement("FIGHT!", 2.5)
-	print("[Match] Match started!")
+	print("[MatchController] Match started!")
 end)
 
 matchEnded.OnClientEvent:Connect(function(winnerName, scoreList)
@@ -147,7 +187,16 @@ matchEnded.OnClientEvent:Connect(function(winnerName, scoreList)
 		and "YOU WIN!"
 		or  winnerName .. " wins!"
 	showAnnouncement(msg, MatchConstants.END_RESET_DELAY - 1)
-	print(string.format("[Match] Match over. Winner: %s", winnerName))
+	print(string.format("[MatchController] Match over. Winner: %s", winnerName))
+end)
+
+intermissionTick.OnClientEvent:Connect(function(secondsLeft)
+	intermissionPanel.Visible = true
+	intermissionCountdown.Text = tostring(secondsLeft)
+	print(string.format("[MatchController] Intermission: %ds", secondsLeft))
+	-- Pulse the number on each tick
+	intermissionCountdown.TextTransparency = 0.4
+	TweenService:Create(intermissionCountdown, TweenInfo.new(0.25), { TextTransparency = 0 }):Play()
 end)
 
 -- Reuse PlayerDied for kill feed entries
