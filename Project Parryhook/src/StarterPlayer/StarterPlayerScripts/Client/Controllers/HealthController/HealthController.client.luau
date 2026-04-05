@@ -16,6 +16,11 @@ local HealthConstants = require(game.ReplicatedStorage.Shared.Constants.HealthCo
 local SoundManager    = require(game.ReplicatedStorage.Client.SoundManager)
 local HUD             = require(game.ReplicatedStorage.Client.HUD)
 
+-- Diagnostic: confirm HUD functions loaded correctly
+if typeof(HUD.setHP) ~= "function" then
+	warn("[HealthController] HUD.setHP is missing — paste HUD.luau content into Studio")
+end
+
 -- Local HP mirror (display only)
 local currentHP = HealthConstants.MAX_HEALTH
 
@@ -64,7 +69,7 @@ end)
 
 healthUpdated.OnClientEvent:Connect(function(hp, maxHp)
 	currentHP = hp
-	HUD.setHP(hp, maxHp)
+	if HUD.setHP then HUD.setHP(hp, maxHp) end
 end)
 
 playerDied.OnClientEvent:Connect(function(victim, attacker)

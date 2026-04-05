@@ -1,0 +1,89 @@
+{
+  "name": "Parryhook",
+  "tree": {
+    "$className": "DataModel",
+
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+
+      "Shared": {
+        "$path": "src/ReplicatedStorage/Shared"
+      },
+      "Client": {
+        "$path": "src/ReplicatedStorage/Client"
+      }
+    },
+
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+
+      "Server": {
+        "$className": "Folder",
+        "Systems": {
+          "$path": "src/ServerScriptService/Server/Systems"
+        }
+      }
+    },
+
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+
+        "Client": {
+          "$className": "Folder",
+
+          "Controllers": {
+            "$className": "Folder",
+
+            "CharacterController": {
+              "$path": "src/StarterPlayer/StarterPlayerScripts/Client/Controllers/CharacterController/CharacterController.client.luau",
+              "DashHandler":       { "$path": "src/StarterPlayer/StarterPlayerScripts/Client/Controllers/CharacterController/DashHandler.luau" },
+              "PhysicsApplier":    { "$path": "src/StarterPlayer/StarterPlayerScripts/Client/Controllers/CharacterController/PhysicsApplier.luau" },
+              "SlideHandler":      { "$path": "src/StarterPlayer/StarterPlayerScripts/Client/Controllers/CharacterController/SlideHandler.luau" },
+              "InputHandler":      { "$path": "src/StarterPlayer/StarterPlayerScripts/Client/Controllers/CharacterController/InputHandler.luau" },
+              "AnimationHandler":  { "$path": "src/StarterPlayer/StarterPlayerScripts/Client/Controllers/CharacterController/AnimationHandler.luau" },
+              "StateManager":      { "$path": "src/StarterPlayer/StarterPlayerScripts/Client/Controllers/CharacterController/StateManager.luau" },
+              "MovementResolver":  { "$path": "src/StarterPlayer/StarterPlayerScripts/Client/Controllers/CharacterController/MovementResolver.luau" },
+              "GrappleHandler":    { "$path": "src/StarterPlayer/StarterPlayerScripts/Client/Controllers/CharacterController/GrappleHandler.luau" },
+              "CameraController":  { "$path": "src/StarterPlayer/StarterPlayerScripts/Client/Controllers/CharacterController/CameraController.luau" }
+            },
+
+            "HitFeedback": {
+              "$path": "src/StarterPlayer/StarterPlayerScripts/Client/Controllers/HitFeedback/HitFeedback.client.luau"
+            },
+
+            "HitMarker": {
+              "$path": "src/StarterPlayer/StarterPlayerScripts/Client/Controllers/HitMarker/HitMarker.client.luau"
+            },
+
+            "ParryController": {
+              "$path": "src/StarterPlayer/StarterPlayerScripts/Client/Controllers/ParryController/ParryController.client.luau"
+            },
+
+            "ProjectileSimulator": {
+              "$path": "src/StarterPlayer/StarterPlayerScripts/Client/Controllers/ProjectileSimulator/ProjectileSimulator.client.luau"
+            },
+
+            "HUDController": {
+              "$path": "src/StarterPlayer/StarterPlayerScripts/Client/Controllers/HUDController/HUDController.client.luau"
+            },
+
+            "WeaponController": {
+              "$path": "src/StarterPlayer/StarterPlayerScripts/Client/Controllers/WeaponController/WeaponController.client.luau"
+            },
+
+            "HealthController": {
+              "$path": "src/StarterPlayer/StarterPlayerScripts/Client/Controllers/HealthController/HealthController.client.luau"
+            },
+
+            "MatchController": {
+              "$path": "src/StarterPlayer/StarterPlayerScripts/Client/Controllers/MatchController/MatchController.client.luau"
+            }
+          }
+        }
+      }
+    }
+  }
+}
