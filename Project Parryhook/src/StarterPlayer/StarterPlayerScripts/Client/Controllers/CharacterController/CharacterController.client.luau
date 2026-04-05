@@ -12,6 +12,7 @@ local MovementResolver  = require(script.MovementResolver)
 local PhysicsApplier    = require(script.PhysicsApplier)
 local DashHandler       = require(script.DashHandler)
 local SlideHandler      = require(script.SlideHandler)
+local GrappleHandler    = require(script.GrappleHandler)
 local CameraController  = require(script.CameraController)
 local AnimationHandler  = require(script.AnimationHandler)
 local Constants         = require(game.ReplicatedStorage.Shared.Constants.MovementConstants)
@@ -43,6 +44,18 @@ task.spawn(function()
 	end
 end)
 local slideHandler      = SlideHandler.new()
+local grappleHandler    = GrappleHandler.new(rootPart)
+
+-- Connect grapple remote asynchronously
+task.spawn(function()
+	local remotes = game.ReplicatedStorage:WaitForChild("Remotes", 10)
+	if not remotes then return end
+	local remote = remotes:WaitForChild("GrappleRequest", 10)
+	if remote then
+		grappleHandler:setRemote(remote)
+	end
+end)
+
 local cameraController  = CameraController.new(camera, humanoid)
 local animationHandler  = AnimationHandler.new(humanoid)
 
@@ -95,12 +108,20 @@ UserInputService.InputBegan:Connect(function(input, processed)
 			0,
 			camera.CFrame.LookVector.Z
 		).Unit
+		-- Dash cancels an active grapple
+		if grappleHandler:isGrappling() then
+			grappleHandler:cancel()
+		end
 		dashHandler:tryDash(InputHandler.getMoveDirection(camera), cameraForward)
 	end
 
 	if input.KeyCode == Enum.KeyCode.E then
 		-- Pass current state so SlideHandler enforces the SPRINTING entry rule
 		slideHandler:trySlide(InputHandler.getMoveDirection(camera), stateManager.current)
+	end
+
+	if input.KeyCode == Enum.KeyCode.F then
+		grappleHandler:tryGrapple(character, camera)
 	end
 end)
 
@@ -117,6 +138,11 @@ local heartbeat = RunService.Heartbeat:Connect(function(dt)
 		end
 	end
 
+	-- Advance grapple pull each frame
+	if grappleHandler:isGrappling() then
+		grappleHandler:tick(dt, rootPart, grounded)
+	end
+
 	local input = {
 		moveDirection  = InputHandler.getMoveDirection(camera),
 		isSprinting    = InputHandler.isSprinting(),
@@ -125,6 +151,7 @@ local heartbeat = RunService.Heartbeat:Connect(function(dt)
 		isSliding      = slideHandler:isSliding(),
 		slideDirection = slideHandler:getSlideDirection(),
 		slideProgress  = slideHandler:getProgress(),
+		isGrappling    = grappleHandler:isGrappling(),
 	}
 
 	local state           = stateManager:update(input, grounded)
@@ -166,4 +193,5 @@ player.CharacterRemoving:Connect(function()
 	physicsApplier:destroy()
 	cameraController:stop()
 	animationHandler:destroy()
+	grappleHandler:destroy()
 end)

@@ -6,6 +6,7 @@
 
 local remotes       = game.ReplicatedStorage:WaitForChild("Remotes")
 local impactEffect  = remotes:WaitForChild("ImpactEffect")
+local parryEffect   = remotes:WaitForChild("ParryEffect")
 
 local FeedbackDispatcher = {}
 
@@ -15,6 +16,13 @@ local FeedbackDispatcher = {}
 -- isKill   : boolean
 function FeedbackDispatcher.fireImpact(position, normal, isKill)
 	impactEffect:FireAllClients(position, normal, isKill)
+end
+
+-- Fire parry VFX at the parry world position.
+-- parrierUserId : number (so clients can skip their own flash if needed)
+-- position      : Vector3
+function FeedbackDispatcher.fireParry(parrierUserId, position)
+	parryEffect:FireAllClients(parrierUserId, position)
 end
 
 return FeedbackDispatcher
