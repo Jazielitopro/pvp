@@ -13,8 +13,10 @@
 local UserInputService = game:GetService("UserInputService")
 local Players          = game:GetService("Players")
 local Workspace        = game:GetService("Workspace")
+local TweenService     = game:GetService("TweenService")
 
-local player = Players.LocalPlayer
+local player    = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 
 local remotes       = game.ReplicatedStorage:WaitForChild("Remotes")
 local fireRequest   = remotes:WaitForChild("FireRequest")
@@ -22,6 +24,47 @@ local reloadRequest = remotes:WaitForChild("ReloadRequest")
 local ammoUpdated   = remotes:WaitForChild("AmmoUpdated")
 
 local WeaponConstants = require(game.ReplicatedStorage.Shared.Constants.WeaponConstants)
+local SoundManager    = require(game.ReplicatedStorage.Client.SoundManager)
+local ScreenEffects   = require(game.ReplicatedStorage.Client.ScreenEffects)
+
+-- ── Muzzle flash UI ───────────────────────────────────────────────────────────
+-- Screen-space burst of light at the bottom-center, simulating gun discharge.
+
+local flashGui = Instance.new("ScreenGui")
+flashGui.Name           = "MuzzleFlash"
+flashGui.ResetOnSpawn   = false
+flashGui.IgnoreGuiInset = true
+flashGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+flashGui.Parent         = playerGui
+
+local muzzleFlash = Instance.new("Frame")
+muzzleFlash.Name                   = "Flash"
+muzzleFlash.Size                   = UDim2.new(0, 180, 0, 180)
+muzzleFlash.AnchorPoint            = Vector2.new(0.5, 1)
+muzzleFlash.Position               = UDim2.new(0.5, 0, 1, 30)  -- below center
+muzzleFlash.BackgroundColor3       = Color3.fromRGB(255, 230, 120)
+muzzleFlash.BackgroundTransparency = 1
+muzzleFlash.BorderSizePixel        = 0
+muzzleFlash.ZIndex                 = 18
+muzzleFlash.Parent                 = flashGui
+
+local flashCorner = Instance.new("UICorner")
+flashCorner.CornerRadius = UDim.new(1, 0)  -- circular
+flashCorner.Parent       = muzzleFlash
+
+local FLASH_OUT = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+local activeFlashTween
+
+local function showMuzzleFlash()
+	if activeFlashTween then activeFlashTween:Cancel() end
+	muzzleFlash.BackgroundTransparency = 0.15
+	muzzleFlash.Size = UDim2.new(0, 200, 0, 200)
+	activeFlashTween = TweenService:Create(muzzleFlash, FLASH_OUT, {
+		BackgroundTransparency = 1,
+		Size = UDim2.new(0, 120, 0, 120),
+	})
+	activeFlashTween:Play()
+end
 
 -- Local mirror of server ammo state (display only)
 local currentAmmo  = WeaponConstants.MAX_AMMO
@@ -45,6 +88,11 @@ UserInputService.InputBegan:Connect(function(input, processed)
 		-- Send the exact camera look direction so the server can spawn the projectile.
 		local direction = Workspace.CurrentCamera.CFrame.LookVector
 		fireRequest:FireServer(direction)
+
+		-- Local VFX — no round-trip wait
+		SoundManager.play("fire")
+		showMuzzleFlash()
+		ScreenEffects.shake(0.06)   -- subtle recoil kick
 	end
 
 	-- Manual reload

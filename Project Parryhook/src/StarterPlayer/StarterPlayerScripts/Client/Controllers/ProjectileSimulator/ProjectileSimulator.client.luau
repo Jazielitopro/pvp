@@ -95,41 +95,78 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 -- ── Impact effect ─────────────────────────────────────────────────────────────
+-- Spawns a ParticleEmitter burst + small neon core at the hit position.
+-- The anchor Part is destroyed after the particles finish emitting.
 
--- Remove all visual bullets when any impact fires
--- (server has already determined which bullet hit — we remove the oldest active one
---  heuristically; full id-based removal would need the projectile id in ImpactEffect)
-local function spawnImpactFlash(position, _normal, isKill)
-	local flash           = Instance.new("Part")
-	flash.Name            = "ImpactFlash"
-	flash.Size            = Vector3.new(0.6, 0.6, 0.6)
-	flash.Shape           = Enum.PartType.Ball
-	flash.Material        = Enum.Material.Neon
-	flash.Color           = isKill
-		and Color3.fromRGB(220, 30, 30)   -- red kill flash
-		or  Color3.fromRGB(255, 200, 80)  -- golden hit flash
-	flash.CastShadow      = false
-	flash.CanCollide      = false
-	flash.Anchored        = true
-	flash.Position        = position
-	flash.Parent          = workspace
+local function spawnImpact(position, normal, isKill)
+	local hitColor  = isKill
+		and Color3.fromRGB(220, 30,  30)   -- red on kill
+		or  Color3.fromRGB(255, 200, 80)   -- golden on hit
 
-	-- Tween: scale up and fade out
-	local EXPAND = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-	TweenService:Create(flash, EXPAND, {
-		Size = Vector3.new(1.4, 1.4, 1.4),
-	}):Play()
+	-- Tiny anchor part so ParticleEmitter has somewhere to live
+	local anchor        = Instance.new("Part")
+	anchor.Name         = "ImpactFX"
+	anchor.Anchored     = true
+	anchor.CanCollide   = false
+	anchor.CastShadow   = false
+	anchor.Transparency = 1
+	anchor.Size         = Vector3.new(0.1, 0.1, 0.1)
+	-- Orient Part so +Y aligns with surface normal (particles emit upward from surface)
+	anchor.CFrame       = CFrame.new(position, position + normal)
+		* CFrame.Angles(math.pi / 2, 0, 0)
+	anchor.Parent       = workspace
 
-	local FADE = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-	local fadeTween = TweenService:Create(flash, FADE, {
+	-- Core flash: small neon sphere that quickly fades
+	local core          = Instance.new("Part")
+	core.Anchored       = true
+	core.CanCollide     = false
+	core.CastShadow     = false
+	core.Shape          = Enum.PartType.Ball
+	core.Material       = Enum.Material.Neon
+	core.Color          = hitColor
+	core.Size           = Vector3.new(0.3, 0.3, 0.3)
+	core.Position       = position
+	core.Parent         = workspace
+
+	local CORE_FADE = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	local coreTween = TweenService:Create(core, CORE_FADE, {
 		Transparency = 1,
+		Size         = Vector3.new(0.08, 0.08, 0.08),
 	})
-	fadeTween:Play()
-	fadeTween.Completed:Connect(function()
-		flash:Destroy()
+	coreTween:Play()
+	coreTween.Completed:Connect(function() core:Destroy() end)
+
+	-- Spark particles
+	local emitter                   = Instance.new("ParticleEmitter")
+	emitter.Color                   = ColorSequence.new(hitColor, Color3.fromRGB(255, 255, 200))
+	emitter.LightEmission           = 0.8
+	emitter.LightInfluence          = 0.2
+	emitter.Size                    = NumberSequence.new({
+		NumberSequenceKeypoint.new(0,   0.08),
+		NumberSequenceKeypoint.new(0.4, 0.04),
+		NumberSequenceKeypoint.new(1,   0),
+	})
+	emitter.Transparency            = NumberSequence.new({
+		NumberSequenceKeypoint.new(0,   0),
+		NumberSequenceKeypoint.new(0.7, 0.4),
+		NumberSequenceKeypoint.new(1,   1),
+	})
+	emitter.Speed                   = NumberRange.new(8, 22)
+	emitter.SpreadAngle             = Vector2.new(60, 60)
+	emitter.Lifetime                = NumberRange.new(0.15, 0.35)
+	emitter.Rate                    = 0     -- burst only, not continuous
+	emitter.RotSpeed                = NumberRange.new(-180, 180)
+	emitter.Rotation                = NumberRange.new(0, 360)
+	emitter.Parent                  = anchor
+
+	-- Fire a one-shot burst then clean up
+	emitter:Emit(isKill and 20 or 10)
+
+	task.delay(0.5, function()
+		anchor:Destroy()
 	end)
 end
 
 impactEffect.OnClientEvent:Connect(function(position, normal, isKill)
-	spawnImpactFlash(position, normal, isKill)
+	spawnImpact(position, normal, isKill)
 end)

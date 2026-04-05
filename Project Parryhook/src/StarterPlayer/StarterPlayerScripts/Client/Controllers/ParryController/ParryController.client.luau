@@ -1,16 +1,6 @@
 -- ParryController (LocalScript)
--- Sends parry input to the server and shows client-side feedback.
---
--- G key → ParryRequest(os.clock()) → server opens parry window
--- ParryEffect ← server → flash the screen edge cyan (parry success VFX)
---
--- Client-side window flash: plays immediately on G press so the player
--- sees feedback without waiting for server round-trip.
--- The server window is slightly narrower — if the server rejects due to
--- cooldown, the flash still plays but no actual parry happens (acceptable UX).
---
--- Phase 8: replace screen flash with proper parry ring / spark VFX.
--- TODO: set PARRY_SOUND_ID and REFLECT_SOUND_ID to real Roblox asset IDs.
+-- G key → ParryRequest → server opens parry window.
+-- ParryEffect ← server → parry ring VFX + reflect flash + shake.
 
 local UserInputService = game:GetService("UserInputService")
 local TweenService     = game:GetService("TweenService")
@@ -24,21 +14,8 @@ local parryRequest = remotes:WaitForChild("ParryRequest")
 local parryEffect  = remotes:WaitForChild("ParryEffect")
 
 local ParryConstants = require(game.ReplicatedStorage.Shared.Constants.ParryConstants)
-
--- ── Sound placeholders ────────────────────────────────────────────────────────
-
-local PARRY_SOUND_ID   = 0   -- TODO: replace — sound on local parry attempt
-local REFLECT_SOUND_ID = 0   -- TODO: replace — sound on confirmed parry (ParryEffect)
-
-local parrySound = Instance.new("Sound")
-parrySound.SoundId = "rbxassetid://" .. PARRY_SOUND_ID
-parrySound.Volume  = 0.7
-parrySound.Parent  = game.SoundService
-
-local reflectSound = Instance.new("Sound")
-reflectSound.SoundId = "rbxassetid://" .. REFLECT_SOUND_ID
-reflectSound.Volume  = 0.8
-reflectSound.Parent  = game.SoundService
+local SoundManager   = require(game.ReplicatedStorage.Client.SoundManager)
+local ScreenEffects  = require(game.ReplicatedStorage.Client.ScreenEffects)
 
 -- ── Screen flash UI ───────────────────────────────────────────────────────────
 
@@ -49,7 +26,7 @@ gui.IgnoreGuiInset  = true
 gui.ZIndexBehavior  = Enum.ZIndexBehavior.Sibling
 gui.Parent          = playerGui
 
--- Active window flash: cyan edge vignette while parry window is open
+-- Cyan edge vignette during active parry window
 local windowFlash = Instance.new("Frame")
 windowFlash.Name                   = "WindowFlash"
 windowFlash.Size                   = UDim2.fromScale(1, 1)
@@ -67,7 +44,7 @@ windowGrad.Transparency = NumberSequence.new({
 })
 windowGrad.Parent = windowFlash
 
--- Bright white flash on successful reflect (from ParryEffect event)
+-- Full-screen white flash on confirmed reflect
 local reflectFlash = Instance.new("Frame")
 reflectFlash.Name                   = "ReflectFlash"
 reflectFlash.Size                   = UDim2.fromScale(1, 1)
@@ -77,11 +54,11 @@ reflectFlash.BorderSizePixel        = 0
 reflectFlash.ZIndex                 = 22
 reflectFlash.Parent                 = gui
 
-local WINDOW_IN   = TweenInfo.new(0.05, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local WINDOW_OUT  = TweenInfo.new(ParryConstants.CLIENT_WINDOW, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 local REFLECT_OUT = TweenInfo.new(0.2,  Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 
 local activeWindowTween
+
 local function showParryWindow()
 	if activeWindowTween then activeWindowTween:Cancel() end
 	windowFlash.BackgroundTransparency = 0.3
@@ -91,13 +68,40 @@ local function showParryWindow()
 end
 
 local function showReflectFlash()
-	reflectFlash.BackgroundTransparency = 0.15
-	local tw = TweenService:Create(reflectFlash, REFLECT_OUT,
-		{ BackgroundTransparency = 1 })
-	tw:Play()
+	reflectFlash.BackgroundTransparency = 0.1
+	TweenService:Create(reflectFlash, REFLECT_OUT,
+		{ BackgroundTransparency = 1 }):Play()
 end
 
--- ── Cooldown tracking (client-side only — prevents UI spam) ──────────────────
+-- ── 3D Parry ring VFX ─────────────────────────────────────────────────────────
+-- Expanding flat disk (CylinderMesh) that blooms outward and fades at the hit point.
+
+local function spawnParryRing(position)
+	local part          = Instance.new("Part")
+	part.Anchored       = true
+	part.CanCollide     = false
+	part.CastShadow     = false
+	part.Size           = Vector3.new(0.3, 0.15, 0.3)
+	part.Material       = Enum.Material.Neon
+	part.Color          = Color3.fromRGB(80, 220, 200)   -- cyan ring
+	part.Transparency   = 0
+	part.CFrame         = CFrame.new(position)
+	part.Parent         = workspace
+
+	local mesh          = Instance.new("SpecialMesh")
+	mesh.MeshType       = Enum.MeshType.Cylinder
+	mesh.Scale          = Vector3.new(0.05, 1, 1)   -- very flat disk
+	mesh.Parent         = part
+
+	-- Expand + fade over 0.35s
+	local RING_EXPAND = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	TweenService:Create(part, RING_EXPAND, { Size = Vector3.new(0.3, 8, 8) }):Play()
+	local fadeTween = TweenService:Create(part, RING_EXPAND, { Transparency = 1 })
+	fadeTween:Play()
+	fadeTween.Completed:Connect(function() part:Destroy() end)
+end
+
+-- ── Cooldown tracking ─────────────────────────────────────────────────────────
 
 local cooldownUntil = 0
 
@@ -109,25 +113,18 @@ UserInputService.InputBegan:Connect(function(input, processed)
 
 	local now = os.clock()
 	if now < cooldownUntil then return end
-
 	cooldownUntil = now + ParryConstants.COOLDOWN
 
-	-- Send server timestamp for Option C upgrade compatibility
 	parryRequest:FireServer(now)
-
-	-- Immediate local feedback
 	showParryWindow()
-	if PARRY_SOUND_ID ~= 0 then parrySound:Play() end
+	SoundManager.play("parry_swing")
 end)
 
--- ── Parry effect (server confirmed a successful reflection) ───────────────────
+-- ── Parry confirmed ───────────────────────────────────────────────────────────
 
-parryEffect.OnClientEvent:Connect(function(parrierUserId, _position)
-	-- Show reflect flash to everyone (spectators too)
-	-- For the parrier themselves, it's a brighter reward flash
+parryEffect.OnClientEvent:Connect(function(_parrierUserId, position)
 	showReflectFlash()
-	if REFLECT_SOUND_ID ~= 0 then reflectSound:Play() end
-
-	-- TODO Phase 8: spawn 3D spark VFX at _position
-	print(string.format("[Parry] Player %d reflected a bullet!", parrierUserId))
+	spawnParryRing(position)
+	SoundManager.play("parry_hit")
+	ScreenEffects.shake(0.18)   -- satisfying punch on successful reflect
 end)

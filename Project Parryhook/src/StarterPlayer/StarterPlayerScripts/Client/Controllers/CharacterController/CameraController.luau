@@ -7,9 +7,10 @@
 -- space automatically, integrates cleanly with mouse look.
 -- FOV changes via camera.FieldOfView lerped per state.
 
-local RunService = game:GetService("RunService")
-local Players    = game:GetService("Players")
-local Constants  = require(game.ReplicatedStorage.Shared.Constants.MovementConstants)
+local RunService    = game:GetService("RunService")
+local Players       = game:GetService("Players")
+local Constants     = require(game.ReplicatedStorage.Shared.Constants.MovementConstants)
+local ScreenEffects = require(game.ReplicatedStorage.Client.ScreenEffects)
 
 -- Bob target parameters per movement state.
 -- States not listed here default to amplitude = 0 (no bob).
@@ -84,8 +85,9 @@ function CameraController:_update(state, dt)
 	local leanAlpha   = math.min(Constants.LEAN_LERP_SPEED * dt, 1)
 	self._currentLeanZ = self._currentLeanZ + (targetLeanZ - self._currentLeanZ) * leanAlpha
 
-	-- Combine bob + lean into CameraOffset
-	self._humanoid.CameraOffset = Vector3.new(bobX, bobY, self._currentLeanZ)
+	-- Combine bob + lean + camera shake into CameraOffset
+	local shake = ScreenEffects.consumeShake(dt)
+	self._humanoid.CameraOffset = Vector3.new(bobX + shake.X, bobY + shake.Y, self._currentLeanZ)
 
 	-- ── Field of view ──────────────────────────────────────────────────────
 	local targetFOV = FOV_TARGETS[state] or Constants.FOV_NORMAL
