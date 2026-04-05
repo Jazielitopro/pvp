@@ -28,9 +28,14 @@ local SoundManager    = require(game.ReplicatedStorage.Client.SoundManager)
 local ScreenEffects   = require(game.ReplicatedStorage.Client.ScreenEffects)
 local HUD             = require(game.ReplicatedStorage.Client.HUD)
 
--- Diagnostic: confirm HUD functions loaded correctly
+-- ── Startup diagnostics ───────────────────────────────────────────────────────
+
+print("[WeaponController] Initialized for", player.Name)
+
 if typeof(HUD.setAmmo) ~= "function" then
 	warn("[WeaponController] HUD.setAmmo is missing — paste HUD.luau content into Studio")
+else
+	print("[WeaponController] HUD.setAmmo OK")
 end
 
 -- ── Muzzle flash UI ───────────────────────────────────────────────────────────
@@ -114,5 +119,11 @@ end)
 ammoUpdated.OnClientEvent:Connect(function(ammo, reloading)
 	currentAmmo = ammo
 	isReloading = reloading
-	if HUD.setAmmo then HUD.setAmmo(ammo, WeaponConstants.MAX_AMMO, reloading) end
+	print(string.format("[WeaponController] Ammo update → %d / %d%s",
+		ammo, WeaponConstants.MAX_AMMO, reloading and " (RELOADING)" or ""))
+	if HUD.setAmmo then
+		HUD.setAmmo(ammo, WeaponConstants.MAX_AMMO, reloading)
+	else
+		warn("[WeaponController] HUD.setAmmo still nil — HUD module not loaded")
+	end
 end)

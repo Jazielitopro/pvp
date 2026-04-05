@@ -89,9 +89,12 @@ Players.PlayerAdded:Connect(function(player)
 		s.ammo        = Constants.MAX_AMMO
 		s.isReloading = false
 
-		-- Brief wait for the client WeaponController to finish initialising
-		task.wait(0.5)
+		-- Wait longer so client LocalScripts finish loading before the
+		-- first sync is sent. 0.5s was too short for Player 2+ in Team Test.
+		task.wait(2)
 		syncAmmo(player)
+		print(string.format("[WeaponSystem] Synced ammo for %s (%d / %d)",
+			player.Name, s.ammo, Constants.MAX_AMMO))
 	end)
 end)
 
