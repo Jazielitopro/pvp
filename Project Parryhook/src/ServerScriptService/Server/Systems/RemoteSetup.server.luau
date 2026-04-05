@@ -40,6 +40,11 @@ local hitConfirmed = Instance.new("RemoteEvent")
 hitConfirmed.Name   = "HitConfirmed"   -- fired to attacker: (wasKill, victimName)
 hitConfirmed.Parent = remotes
 
+-- Grapple — Phase 4
+local grappleRequest = Instance.new("RemoteEvent")
+grappleRequest.Name   = "GrappleRequest"  -- client → server: (attachPoint: Vector3)
+grappleRequest.Parent = remotes
+
 -- Projectile — Phase 3
 local spawnProjectile = Instance.new("RemoteEvent")
 spawnProjectile.Name   = "SpawnProjectile"  -- server → all: (id, ownerId, origin, dir, speed)
