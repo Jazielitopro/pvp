@@ -2,13 +2,15 @@
 -- Called by ProjectileSimulator on every raycast hit.
 -- Determines what was hit (player character or environment) and routes accordingly.
 --
--- Phase 5 hook: parry detection will be added here before damage is applied.
--- Phase 5 hook: lag compensation rewind will be applied to victim position here.
+-- Phase 5: parry check runs before damage. If the victim is parrying,
+--   the projectile is reflected and damage is skipped.
+--   Upgrade path to Option C is fully contained in ParryHandler.isParrying().
 
 local Players            = game:GetService("Players")
 local ProjectileRegistry = require(script.Parent.ProjectileRegistry)
 local DamageApplicator   = require(script.Parent.DamageApplicator)
 local FeedbackDispatcher = require(script.Parent.FeedbackDispatcher)
+local ParryHandler       = require(script.Parent.ParryHandler)
 
 local CollisionHandler = {}
 
@@ -26,26 +28,34 @@ local function getPlayerFromInstance(instance)
 end
 
 -- Called by ProjectileSimulator when a raycast hits something.
--- projectile : table from ProjectileRegistry
+-- projectile : table from ProjectileRegistry (still live in registry when called)
 -- hitResult  : RaycastResult
 function CollisionHandler.onHit(projectile, hitResult)
-	-- Remove from registry immediately — one hit per bullet.
-	ProjectileRegistry.remove(projectile.id)
-
 	local hitPos    = hitResult.Position
 	local hitNormal = hitResult.Normal
 	local attacker  = projectile.owner
 
-	-- ── Phase 5 hook: parry check goes here ────────────────────────────────
-
 	local victim = getPlayerFromInstance(hitResult.Instance)
 
 	if victim and victim ~= attacker then
-		-- Hit a player
+		-- ── Parry check ──────────────────────────────────────────────────────
+		if ParryHandler.isParrying(victim) then
+			-- Reflect: update projectile in registry (do NOT remove it).
+			-- It keeps flying in the reversed direction with the parrier as new owner.
+			ParryHandler.reflect(projectile, victim)
+			-- projectile.position stays at hitPos so it starts from the collision point
+			projectile.position = hitPos
+			FeedbackDispatcher.fireParry(victim.UserId, hitPos)
+			return   -- no damage, no impact flash
+		end
+
+		-- ── Normal hit ───────────────────────────────────────────────────────
+		ProjectileRegistry.remove(projectile.id)
 		local isKill = DamageApplicator.applyDamage(victim, attacker)
 		FeedbackDispatcher.fireImpact(hitPos, hitNormal, isKill)
 	else
-		-- Hit environment (or self — shouldn't happen with filter, but guard anyway)
+		-- Hit environment (or self — guard)
+		ProjectileRegistry.remove(projectile.id)
 		FeedbackDispatcher.fireImpact(hitPos, hitNormal, false)
 	end
 end

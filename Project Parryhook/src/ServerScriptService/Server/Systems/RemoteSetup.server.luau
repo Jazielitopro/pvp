@@ -45,6 +45,15 @@ local grappleRequest = Instance.new("RemoteEvent")
 grappleRequest.Name   = "GrappleRequest"  -- client → server: (attachPoint: Vector3)
 grappleRequest.Parent = remotes
 
+-- Parry — Phase 5
+local parryRequest = Instance.new("RemoteEvent")
+parryRequest.Name   = "ParryRequest"  -- client → server: (clientTimestamp: number)
+parryRequest.Parent = remotes
+
+local parryEffect = Instance.new("RemoteEvent")
+parryEffect.Name   = "ParryEffect"    -- server → all: (parrierUserId: number, position: Vector3)
+parryEffect.Parent = remotes
+
 -- Projectile — Phase 3
 local spawnProjectile = Instance.new("RemoteEvent")
 spawnProjectile.Name   = "SpawnProjectile"  -- server → all: (id, ownerId, origin, dir, speed)
