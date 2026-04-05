@@ -26,6 +26,7 @@ local ammoUpdated   = remotes:WaitForChild("AmmoUpdated")
 local WeaponConstants = require(game.ReplicatedStorage.Shared.Constants.WeaponConstants)
 local SoundManager    = require(game.ReplicatedStorage.Client.SoundManager)
 local ScreenEffects   = require(game.ReplicatedStorage.Client.ScreenEffects)
+local HUD             = require(game.ReplicatedStorage.Client.HUD)
 
 -- ── Muzzle flash UI ───────────────────────────────────────────────────────────
 -- Screen-space burst of light at the bottom-center, simulating gun discharge.
@@ -108,11 +109,5 @@ end)
 ammoUpdated.OnClientEvent:Connect(function(ammo, reloading)
 	currentAmmo = ammo
 	isReloading = reloading
-
-	-- TODO Phase 8: push ammo + reloading state to HUD module here
-	if reloading then
-		print(string.format("[Weapon] Reloading... (%ds)", WeaponConstants.RELOAD_TIME))
-	else
-		print(string.format("[Weapon] Ammo: %d / %d", ammo, WeaponConstants.MAX_AMMO))
-	end
+	HUD.setAmmo(ammo, WeaponConstants.MAX_AMMO, reloading)
 end)

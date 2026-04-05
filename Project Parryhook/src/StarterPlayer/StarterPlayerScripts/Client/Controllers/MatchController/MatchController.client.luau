@@ -21,6 +21,7 @@ local matchEnded   = remotes:WaitForChild("MatchEnded")
 local playerDied   = remotes:WaitForChild("PlayerDied")
 
 local MatchConstants = require(game.ReplicatedStorage.Shared.Constants.MatchConstants)
+local HUD            = require(game.ReplicatedStorage.Client.HUD)
 
 -- ── Local score mirror ────────────────────────────────────────────────────────
 
@@ -117,13 +118,7 @@ end
 
 scoreUpdated.OnClientEvent:Connect(function(scoreList)
 	localScores = scoreList
-	-- TODO Phase 8: push scoreList to scoreboard HUD
-	-- Debug print (remove when HUD is live)
-	local parts = {}
-	for i, entry in ipairs(scoreList) do
-		parts[i] = string.format("%s: %d", entry.name, entry.kills)
-	end
-	print("[Match] Scores — " .. table.concat(parts, "  |  "))
+	HUD.setScores(scoreList)
 end)
 
 matchStarted.OnClientEvent:Connect(function()
@@ -136,7 +131,7 @@ matchEnded.OnClientEvent:Connect(function(winnerName, scoreList)
 	local msg = winnerName == player.DisplayName
 		and "YOU WIN!"
 		or  winnerName .. " wins!"
-	showAnnouncement(msg, Constants.END_RESET_DELAY - 1)
+	showAnnouncement(msg, MatchConstants.END_RESET_DELAY - 1)
 	print(string.format("[Match] Match over. Winner: %s", winnerName))
 end)
 

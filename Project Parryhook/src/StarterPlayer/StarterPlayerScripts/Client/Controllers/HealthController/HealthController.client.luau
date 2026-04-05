@@ -14,6 +14,7 @@ local playerDied    = remotes:WaitForChild("PlayerDied")
 
 local HealthConstants = require(game.ReplicatedStorage.Shared.Constants.HealthConstants)
 local SoundManager    = require(game.ReplicatedStorage.Client.SoundManager)
+local HUD             = require(game.ReplicatedStorage.Client.HUD)
 
 -- Local HP mirror (display only)
 local currentHP = HealthConstants.MAX_HEALTH
@@ -63,8 +64,7 @@ end)
 
 healthUpdated.OnClientEvent:Connect(function(hp, maxHp)
 	currentHP = hp
-	-- TODO Phase 8: push hp to HUD health bar here
-	print(string.format("[Health] HP: %d / %d", hp, maxHp))
+	HUD.setHP(hp, maxHp)
 end)
 
 playerDied.OnClientEvent:Connect(function(victim, attacker)
