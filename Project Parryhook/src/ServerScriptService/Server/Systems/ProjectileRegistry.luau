@@ -20,6 +20,8 @@ function ProjectileRegistry.register(data)
 	data.id = nextId
 	nextId  += 1
 	registry[data.id] = data
+	print(string.format("[Registry] Projectile id=%d registered (owner: %s)",
+		data.id, data.owner and data.owner.Name or "ENV"))
 	return data.id
 end
 
@@ -28,7 +30,10 @@ function ProjectileRegistry.get(id)
 end
 
 function ProjectileRegistry.remove(id)
-	registry[id] = nil
+	if registry[id] then
+		print(string.format("[Registry] Projectile id=%d removed", id))
+		registry[id] = nil
+	end
 end
 
 -- Returns the live table — callers must not store the reference across yields.

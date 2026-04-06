@@ -72,17 +72,26 @@ parryRequest.OnServerEvent:Connect(function(player, _clientTimestamp)
 	local s   = getState(player)
 	local now = os.clock()
 
-	if now < s.cooldownUntil then return end  -- still on cooldown
+	if now < s.cooldownUntil then
+		warn(string.format("[Parry] %s tried to parry but on cooldown (%.2fs remaining)",
+			player.Name, s.cooldownUntil - now))
+		return
+	end
 
 	-- Open the parry window
-	s.windowEnd    = now + Constants.PARRY_WINDOW
+	s.windowEnd     = now + Constants.PARRY_WINDOW
 	s.cooldownUntil = now + Constants.COOLDOWN
+	print(string.format("[Parry] %s opened parry window (%.2fs window, %.2fs cooldown)",
+		player.Name, Constants.PARRY_WINDOW, Constants.COOLDOWN))
 end)
 
 -- ── Player lifecycle ──────────────────────────────────────────────────────────
 
 Players.PlayerRemoving:Connect(function(player)
 	state[player] = nil
+	print(string.format("[Parry] State cleaned up for %s", player.Name))
 end)
+
+print("[Parry] ParryHandler ready")
 
 return ParryHandler

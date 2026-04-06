@@ -32,12 +32,19 @@ end
 -- moveDirection: current input direction (Vector3, may be zero)
 -- cameraForward: flat camera look vector used as fallback if no input
 function DashHandler:tryDash(moveDirection, cameraForward)
-	if not self:canDash() then return end
+	if not self:canDash() then
+		print(string.format("[Dash] Rejected — isDashing=%s onCooldown=%s",
+			tostring(self._isDashing), tostring(self._onCooldown)))
+		return
+	end
 
 	-- Lock direction at dash start: input direction or camera forward if idle
 	local dir = moveDirection.Magnitude > 0 and moveDirection or cameraForward
 	self._dashDirection = dir
 	self._isDashing     = true
+
+	print(string.format("[Dash] Started — dir=(%.2f,%.2f,%.2f)",
+		dir.X, dir.Y, dir.Z))
 
 	-- Apply the burst impulse
 	self._physics:applyDash(dir)
@@ -52,8 +59,10 @@ function DashHandler:tryDash(moveDirection, cameraForward)
 	task.delay(Constants.DASH_DURATION, function()
 		self._isDashing  = false
 		self._onCooldown = true
+		print(string.format("[Dash] Ended — cooldown %.2fs", Constants.DASH_COOLDOWN))
 		task.delay(Constants.DASH_COOLDOWN, function()
 			self._onCooldown = false
+			print("[Dash] Cooldown cleared — ready")
 		end)
 	end)
 end

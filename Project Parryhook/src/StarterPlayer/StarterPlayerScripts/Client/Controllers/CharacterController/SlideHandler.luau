@@ -24,8 +24,15 @@ end
 -- currentState must be SPRINTING — slide cannot enter from walk, idle, or air.
 -- moveDirection: current input direction (locked at slide start).
 function SlideHandler:trySlide(moveDirection, currentState)
-	if self._isSliding or self._onCooldown then return end
-	if currentState ~= "sprinting" then return end
+	if self._isSliding or self._onCooldown then
+		print(string.format("[Slide] Rejected — isSliding=%s onCooldown=%s",
+			tostring(self._isSliding), tostring(self._onCooldown)))
+		return
+	end
+	if currentState ~= "sprinting" then
+		print(string.format("[Slide] Rejected — state is '%s' (need sprinting)", tostring(currentState)))
+		return
+	end
 
 	self._isSliding      = true
 	self._elapsed        = 0
@@ -33,6 +40,10 @@ function SlideHandler:trySlide(moveDirection, currentState)
 	self._slideDirection = moveDirection.Magnitude > 0
 		and moveDirection
 		or Vector3.new(0, 0, -1) -- fallback: forward (should not happen from sprint)
+
+	print(string.format("[Slide] Started — dir=(%.2f,%.2f,%.2f) duration=%.2fs",
+		self._slideDirection.X, self._slideDirection.Z, self._slideDirection.Y,
+		Constants.SLIDE_DURATION))
 end
 
 -- Cancel the slide early (e.g. player jumps mid-slide).
@@ -40,8 +51,10 @@ function SlideHandler:cancel()
 	if not self._isSliding then return end
 	self._isSliding  = false
 	self._onCooldown = true
+	print("[Slide] Cancelled early")
 	task.delay(Constants.SLIDE_COOLDOWN, function()
 		self._onCooldown = false
+		print("[Slide] Cooldown cleared — ready")
 	end)
 end
 
@@ -56,8 +69,10 @@ function SlideHandler:tick(dt)
 	if self._progress >= 1 then
 		self._isSliding  = false
 		self._onCooldown = true
+		print("[Slide] Completed naturally")
 		task.delay(Constants.SLIDE_COOLDOWN, function()
 			self._onCooldown = false
+			print("[Slide] Cooldown cleared — ready")
 		end)
 		return false
 	end

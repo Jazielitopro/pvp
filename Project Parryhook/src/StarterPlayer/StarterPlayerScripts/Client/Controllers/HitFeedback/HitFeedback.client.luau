@@ -54,8 +54,12 @@ end
 
 local lastHP = HealthConstants.MAX_HEALTH
 
+print("[HitFeedback] Initialized for", player.Name)
+
 healthUpdated.OnClientEvent:Connect(function(hp, _maxHp)
 	if hp < lastHP then
+		print(string.format("[HitFeedback] Damage received — %.0f → %.0f HP (−%.0f)",
+			lastHP, hp, lastHP - hp))
 		flashDamage()
 		SoundManager.play("hurt")
 		ScreenEffects.shake(0.28)   -- medium shake on taking a hit

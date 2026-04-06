@@ -89,9 +89,16 @@ local function showHitMarker(isKill)
 	end
 end
 
+print("[HitMarker] Initialized for", player.Name)
+
 -- ── Server event ──────────────────────────────────────────────────────────────
 
-hitConfirmed.OnClientEvent:Connect(function(wasKill, _victimName)
+hitConfirmed.OnClientEvent:Connect(function(wasKill, victimName)
+	if wasKill then
+		print(string.format("[HitMarker] KILL confirmed — eliminated %s", victimName or "?"))
+	else
+		print(string.format("[HitMarker] Hit confirmed — damaged %s", victimName or "?"))
+	end
 	showHitMarker(wasKill)
 	SoundManager.play(wasKill and "kill" or "hit")
 end)

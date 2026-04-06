@@ -16,6 +16,8 @@ local DamageApplicator = {}
 -- Returns true if the hit was lethal.
 function DamageApplicator.applyDamage(victim, attacker, damage)
 	damage = damage or WeaponConstants.DAMAGE_PER_HIT
+	print(string.format("[Damage] %s → %s: %.0f damage",
+		attacker and attacker.Name or "ENV", victim.Name, damage))
 	return HealthSystem.takeDamage(victim, attacker, damage)
 end
 

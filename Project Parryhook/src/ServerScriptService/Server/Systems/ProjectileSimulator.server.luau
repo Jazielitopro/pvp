@@ -58,6 +58,8 @@ function getHistoricalPosition(player, t)
 	return nil
 end
 
+print("[ProjectileSimulator] Server authoritative simulator running")
+
 -- ── Simulation loop ───────────────────────────────────────────────────────────
 
 RunService.Heartbeat:Connect(function(dt)
@@ -69,6 +71,8 @@ RunService.Heartbeat:Connect(function(dt)
 	for id, proj in pairs(registry) do
 		-- Lifetime check
 		if (now - proj.spawnTime) >= WeaponConstants.BULLET_LIFETIME then
+			print(string.format("[ProjectileSimulator] Projectile id=%d expired (lifetime %.2fs)",
+				id, now - proj.spawnTime))
 			ProjectileRegistry.remove(id)
 			continue
 		end

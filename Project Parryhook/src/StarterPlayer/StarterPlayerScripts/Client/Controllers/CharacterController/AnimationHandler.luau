@@ -60,6 +60,8 @@ function AnimationHandler:update(state)
 	local prev = self._prevState
 	self._prevState = state
 
+	print(string.format("[Anim] State: %s → %s", prev, state))
+
 	if not self._joint then return end
 
 	-- ── Exiting slide ──────────────────────────────────────────────────────
@@ -91,6 +93,7 @@ end
 -- The fade-to-black covers the end of the tween so the transition is clean.
 function AnimationHandler:playDeath()
 	if not self._joint then return end
+	print("[Anim] Death pose played")
 	local deathC0 = self._defaultC0 * CFrame.Angles(0, 0, DEATH_ROLL)
 	TweenService:Create(self._joint, DEATH_ENTER_INFO, { C0 = deathC0 }):Play()
 end

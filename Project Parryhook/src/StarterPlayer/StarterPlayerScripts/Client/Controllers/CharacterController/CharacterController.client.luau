@@ -97,6 +97,7 @@ end)
 -- ── Character setup / teardown ────────────────────────────────────────────────
 
 local function cleanupCharacter()
+	print("[CharacterController] Cleaning up previous character for", player.Name)
 	if heartbeat      then heartbeat:Disconnect();   heartbeat      = nil end
 	if cameraCtrl     then cameraCtrl:stop();         cameraCtrl     = nil end
 	if animHandler    then animHandler:destroy();      animHandler    = nil end
@@ -113,6 +114,7 @@ local function cleanupCharacter()
 end
 
 local function setupCharacter(character)
+	print("[CharacterController] Setting up character for", player.Name)
 	cleanupCharacter()
 
 	currentChar = character
@@ -141,11 +143,24 @@ local function setupCharacter(character)
 	-- Connect remotes asynchronously (don't block movement startup)
 	task.spawn(function()
 		local remotes = game.ReplicatedStorage:WaitForChild("Remotes", 10)
-		if not remotes then return end
+		if not remotes then
+			warn("[CharacterController] Remotes folder not found after 10s — DashRequest/GrappleRequest unavailable")
+			return
+		end
 		local dr = remotes:WaitForChild("DashRequest", 10)
-		if dr and dashHandler    then dashHandler:setRemote(dr) end
+		if dr and dashHandler then
+			dashHandler:setRemote(dr)
+			print("[CharacterController] DashRequest remote connected for", player.Name)
+		elseif not dr then
+			warn("[CharacterController] DashRequest not found after 10s")
+		end
 		local gr = remotes:WaitForChild("GrappleRequest", 10)
-		if gr and grappleHandler then grappleHandler:setRemote(gr) end
+		if gr and grappleHandler then
+			grappleHandler:setRemote(gr)
+			print("[CharacterController] GrappleRequest remote connected for", player.Name)
+		elseif not gr then
+			warn("[CharacterController] GrappleRequest not found after 10s")
+		end
 	end)
 
 	cameraCtrl:start(function() return stateManager.current end)

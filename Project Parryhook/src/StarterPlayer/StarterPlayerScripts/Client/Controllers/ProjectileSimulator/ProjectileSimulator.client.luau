@@ -62,9 +62,13 @@ local function makeBulletPart(origin, direction)
 	return part
 end
 
+print("[ClientProjectile] Initialized for", player.Name)
+
 -- ── Spawn handler ─────────────────────────────────────────────────────────────
 
-spawnProjectile.OnClientEvent:Connect(function(id, _ownerId, origin, direction, speed)
+spawnProjectile.OnClientEvent:Connect(function(id, ownerId, origin, direction, speed)
+	print(string.format("[ClientProjectile] Bullet id=%d spawned (ownerId=%d) speed=%.0f",
+		id, ownerId, speed))
 	local part = makeBulletPart(origin, direction)
 
 	bullets[id] = {
@@ -83,6 +87,7 @@ RunService.RenderStepped:Connect(function(dt)
 	for id, bullet in pairs(bullets) do
 		-- Expire if server lifetime reached
 		if (now - bullet.spawnTime) >= WeaponConstants.BULLET_LIFETIME then
+			print(string.format("[ClientProjectile] Bullet id=%d expired (%.2fs)", id, now - bullet.spawnTime))
 			bullet.part:Destroy()
 			bullets[id] = nil
 			continue
@@ -168,5 +173,7 @@ local function spawnImpact(position, normal, isKill)
 end
 
 impactEffect.OnClientEvent:Connect(function(position, normal, isKill)
+	print(string.format("[ClientProjectile] Impact at (%.1f,%.1f,%.1f) — %s",
+		position.X, position.Y, position.Z, isKill and "KILL" or "hit"))
 	spawnImpact(position, normal, isKill)
 end)

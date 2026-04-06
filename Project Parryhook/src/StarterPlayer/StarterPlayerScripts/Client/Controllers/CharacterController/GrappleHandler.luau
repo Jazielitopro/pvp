@@ -139,23 +139,39 @@ end
 function GrappleHandler:tryGrapple(character, camera)
 	-- Toggle off
 	if self._grappling then
-		self:cancel()
+		print("[Grapple] Toggled off by player")
+		self:cancel("toggle")
 		return
 	end
 
-	if os.clock() < self._cooldownUntil then return end
+	local now = os.clock()
+	if now < self._cooldownUntil then
+		print(string.format("[Grapple] On cooldown (%.2fs remaining)", self._cooldownUntil - now))
+		return
+	end
 
 	local origin = camera.CFrame.Position
 	local dir    = camera.CFrame.LookVector
 	local result = workspace:Raycast(origin, dir * Constants.MAX_RANGE, makeParams(character))
-	if not result then return end
-	if isPlayerCharacter(result.Instance) then return end
+	if not result then
+		print("[Grapple] Raycast missed — no surface in range")
+		return
+	end
+	if isPlayerCharacter(result.Instance) then
+		print("[Grapple] Hit a player character — attachment blocked")
+		return
+	end
 
 	self._attachPoint = result.Position
 	self._grappling   = true
-	self._startTime   = os.clock()
+	self._startTime   = now
 	-- Seed internal velocity from current part velocity so the pull feels continuous
 	self._currentVel  = self._rootPart.AssemblyLinearVelocity
+
+	print(string.format("[Grapple] Attached to '%s' at (%.1f,%.1f,%.1f) — dist=%.1f",
+		result.Instance.Name,
+		result.Position.X, result.Position.Y, result.Position.Z,
+		(result.Position - self._rootPart.Position).Magnitude))
 
 	self:_createBeam(result.Position)
 	self:_createLinearVelocity()
@@ -165,12 +181,13 @@ function GrappleHandler:tryGrapple(character, camera)
 	end
 end
 
-function GrappleHandler:cancel()
+function GrappleHandler:cancel(reason)
 	if not self._grappling then return end
 	self._grappling     = false
 	self._attachPoint   = nil
 	self._cooldownUntil = os.clock() + Constants.COOLDOWN
 	self._currentVel    = Vector3.zero
+	print(string.format("[Grapple] Detached — reason: %s", reason or "unknown"))
 	self:_destroyBeam()
 	self:_destroyLinearVelocity()
 end
@@ -182,7 +199,7 @@ function GrappleHandler:tick(dt, rootPart, _grounded)
 
 	-- Force-cancel after MAX_DURATION
 	if os.clock() - self._startTime > Constants.MAX_DURATION then
-		self:cancel()
+		self:cancel("max duration reached")
 		return
 	end
 
@@ -191,7 +208,7 @@ function GrappleHandler:tick(dt, rootPart, _grounded)
 
 	-- Auto-detach when close enough
 	if dist < Constants.MIN_DETACH_DIST then
-		self:cancel()
+		self:cancel("reached hook point")
 		return
 	end
 

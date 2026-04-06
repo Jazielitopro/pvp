@@ -15,6 +15,8 @@ local FeedbackDispatcher = {}
 -- normal   : Vector3  (surface normal, used for spark/decal orientation)
 -- isKill   : boolean
 function FeedbackDispatcher.fireImpact(position, normal, isKill)
+	print(string.format("[Feedback] Impact at (%.1f,%.1f,%.1f) — %s",
+		position.X, position.Y, position.Z, isKill and "KILL" or "hit"))
 	impactEffect:FireAllClients(position, normal, isKill)
 end
 
@@ -22,6 +24,8 @@ end
 -- parrierUserId : number (so clients can skip their own flash if needed)
 -- position      : Vector3
 function FeedbackDispatcher.fireParry(parrierUserId, position)
+	print(string.format("[Feedback] Parry VFX at (%.1f,%.1f,%.1f) — userId=%d",
+		position.X, position.Y, position.Z, parrierUserId))
 	parryEffect:FireAllClients(parrierUserId, position)
 end
 

@@ -25,19 +25,36 @@ local dashRequest = remotes:WaitForChild("DashRequest")
 
 dashRequest.OnServerEvent:Connect(function(player, direction)
 	-- Validate direction is a unit vector on the XZ plane (reject spoofed values)
-	if typeof(direction) ~= "Vector3" then return end
-	if direction.Magnitude < 0.9 or direction.Magnitude > 1.1 then return end
-	if math.abs(direction.Y) > 0.1 then return end
+	if typeof(direction) ~= "Vector3" then
+		warn(string.format("[Validator] %s sent non-Vector3 dash direction — rejected", player.Name))
+		return
+	end
+	if direction.Magnitude < 0.9 or direction.Magnitude > 1.1 then
+		warn(string.format("[Validator] %s sent bad dash direction magnitude=%.3f — rejected",
+			player.Name, direction.Magnitude))
+		return
+	end
+	if math.abs(direction.Y) > 0.1 then
+		warn(string.format("[Validator] %s sent vertical dash (Y=%.3f) — rejected",
+			player.Name, direction.Y))
+		return
+	end
 
 	local now = os.clock()
 
 	-- Enforce server-side cooldown
 	local lastDash = dashCooldowns[player]
-	if lastDash and (now - lastDash) < Constants.DASH_COOLDOWN then return end
+	if lastDash and (now - lastDash) < Constants.DASH_COOLDOWN then
+		warn(string.format("[Validator] %s dash on cooldown (%.2fs remaining) — rejected",
+			player.Name, Constants.DASH_COOLDOWN - (now - lastDash)))
+		return
+	end
 
 	-- Record cooldown and open speed window for the dash duration + small buffer
 	dashCooldowns[player] = now
 	dashWindows[player]   = now + Constants.DASH_DURATION + 0.1
+	print(string.format("[Validator] %s dash accepted — speed window open for %.2fs",
+		player.Name, Constants.DASH_DURATION + 0.1))
 end)
 
 local function validate(player)
@@ -66,6 +83,8 @@ local function validate(player)
 	local inDashWindow = dashExpiry and now < dashExpiry
 
 	if speed > MAX_ALLOWED_SPEED and not inDashWindow then
+		warn(string.format("[Validator] %s speed violation — %.1f studs/s > %.1f max — reset to last valid",
+			player.Name, speed, MAX_ALLOWED_SPEED))
 		-- Return to last valid position without touching Y (preserve fall state)
 		rootPart.CFrame = CFrame.new(
 			record.position.X,
@@ -89,4 +108,7 @@ Players.PlayerRemoving:Connect(function(player)
 	lastValid[player]     = nil
 	dashWindows[player]   = nil
 	dashCooldowns[player] = nil
+	print(string.format("[Validator] Cleaned up state for %s", player.Name))
 end)
+
+print(string.format("[Validator] CharacterValidator running — MAX_SPEED=%.1f studs/s", MAX_ALLOWED_SPEED))

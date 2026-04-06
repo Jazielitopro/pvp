@@ -105,6 +105,8 @@ end
 
 local cooldownUntil = 0
 
+print("[ParryController] Initialized for", player.Name)
+
 -- ── Input ─────────────────────────────────────────────────────────────────────
 
 UserInputService.InputBegan:Connect(function(input, processed)
@@ -112,9 +114,13 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	if input.KeyCode ~= ParryConstants.KEY then return end
 
 	local now = os.clock()
-	if now < cooldownUntil then return end
+	if now < cooldownUntil then
+		print(string.format("[ParryController] Parry on cooldown (%.2fs remaining)", cooldownUntil - now))
+		return
+	end
 	cooldownUntil = now + ParryConstants.COOLDOWN
 
+	print("[ParryController] Parry input — request sent to server")
 	parryRequest:FireServer(now)
 	showParryWindow()
 	SoundManager.play("parry_swing")
@@ -123,6 +129,8 @@ end)
 -- ── Parry confirmed ───────────────────────────────────────────────────────────
 
 parryEffect.OnClientEvent:Connect(function(_parrierUserId, position)
+	print(string.format("[ParryController] Parry effect received at (%.1f,%.1f,%.1f)",
+		position.X, position.Y, position.Z))
 	showReflectFlash()
 	spawnParryRing(position)
 	SoundManager.play("parry_hit")

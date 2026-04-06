@@ -42,6 +42,8 @@ function CollisionHandler.onHit(projectile, hitResult)
 		if ParryHandler.isParrying(victim) then
 			-- Reflect: update projectile in registry (do NOT remove it).
 			-- It keeps flying in the reversed direction with the parrier as new owner.
+			print(string.format("[Collision] Projectile id=%d PARRIED by %s — reflected back at %s",
+				projectile.id, victim.Name, attacker and attacker.Name or "ENV"))
 			ParryHandler.reflect(projectile, victim)
 			-- projectile.position stays at hitPos so it starts from the collision point
 			projectile.position = hitPos
@@ -50,11 +52,20 @@ function CollisionHandler.onHit(projectile, hitResult)
 		end
 
 		-- ── Normal hit ───────────────────────────────────────────────────────
+		print(string.format("[Collision] Projectile id=%d HIT %s (fired by %s)",
+			projectile.id, victim.Name, attacker and attacker.Name or "ENV"))
 		ProjectileRegistry.remove(projectile.id)
 		local isKill = DamageApplicator.applyDamage(victim, attacker)
 		FeedbackDispatcher.fireImpact(hitPos, hitNormal, isKill)
 	else
 		-- Hit environment (or self — guard)
+		if victim == attacker then
+			print(string.format("[Collision] Projectile id=%d hit self (%s) — ignored",
+				projectile.id, attacker and attacker.Name or "?"))
+		else
+			print(string.format("[Collision] Projectile id=%d hit environment at %s",
+				projectile.id, tostring(hitPos)))
+		end
 		ProjectileRegistry.remove(projectile.id)
 		FeedbackDispatcher.fireImpact(hitPos, hitNormal, false)
 	end
