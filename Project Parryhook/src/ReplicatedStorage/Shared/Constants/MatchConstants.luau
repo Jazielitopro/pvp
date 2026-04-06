@@ -1,11 +1,17 @@
 -- MatchConstants
 -- Shared between client and server.
+-- Note: SCORE_LIMIT and ROUND_DURATION are now per-mode in GameModeConfig.
+-- They are kept here only for backward compatibility with any system
+-- that still references them directly.
 
 return {
-	SCORE_LIMIT           = 10,  -- first player to reach this kill count wins
-	ROUND_DURATION        = 300, -- seconds per round (0 = no timer, kill limit only)
-	MIN_PLAYERS           = 2,   -- players needed to start a match
+	-- ── Global match flow ──────────────────────────────────────────────────
+	MIN_PLAYERS           = 2,   -- minimum players required to start any round
 	END_RESET_DELAY       = 5,   -- seconds showing the winner screen before intermission
 	INTERMISSION_DURATION = 15,  -- seconds of intermission countdown before next round
 	RESPAWN_DELAY         = 3,   -- seconds before a dead player respawns (must match HealthSystem)
+
+	-- ── Legacy (overridden by GameModeConfig per mode) ─────────────────────
+	SCORE_LIMIT    = 10,
+	ROUND_DURATION = 300,
 }

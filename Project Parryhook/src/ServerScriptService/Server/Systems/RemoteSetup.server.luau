@@ -76,7 +76,16 @@ local impactEffect = Instance.new("RemoteEvent")
 impactEffect.Name   = "ImpactEffect"        -- server → all: (position, normal, isKill)
 impactEffect.Parent = remotes
 
--- Intermission countdown
+-- Intermission countdown / waiting status
 local intermissionTick = Instance.new("RemoteEvent")
-intermissionTick.Name   = "IntermissionTick"  -- server → all: (secondsLeft: number)
+intermissionTick.Name   = "IntermissionTick"  -- server → all: table {type, secondsLeft, modeName, ...}
 intermissionTick.Parent = remotes
+
+-- Game mode events (multi-mode system)
+local modeSelected = Instance.new("RemoteEvent")
+modeSelected.Name   = "ModeSelected"   -- server → all: (key, displayName, description, teamBased, scoreLimit)
+modeSelected.Parent = remotes
+
+local teamAssigned = Instance.new("RemoteEvent")
+teamAssigned.Name   = "TeamAssigned"   -- server → client: (team: "A"|"B")
+teamAssigned.Parent = remotes
