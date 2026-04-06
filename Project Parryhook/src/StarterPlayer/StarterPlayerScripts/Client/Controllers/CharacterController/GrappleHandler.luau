@@ -1,7 +1,9 @@
 -- GrappleHandler
 -- Client-side grapple logic. Attaches to environment surfaces only.
--- Applies acceleration-based pull toward hook point each frame.
--- CharacterController calls tryGrapple() on input, tick() every Heartbeat.
+-- Uses a LinearVelocity constraint (MaxForce = 1e6) to pull the character;
+-- this overrides the Humanoid's internal movement forces so they no longer
+-- fight the grapple pull.  AssemblyLinearVelocity is intentionally NOT used
+-- for the pull — it would be cancelled each frame by the Humanoid's PID.
 --
 -- Visual: straight Beam rope + small glowing sphere at hook point.
 -- Server is notified via GrappleRequest (recorded for CharacterValidator).
@@ -10,7 +12,6 @@
 --   1. Press F again while grappling (toggle)
 --   2. Reach MIN_DETACH_DIST of the hook
 --   3. MAX_DURATION seconds elapsed
--- NOTE: grounded no longer auto-cancels — players can grapple from the ground.
 
 local Players   = game:GetService("Players")
 local Constants = require(game.ReplicatedStorage.Shared.Constants.GrappleConstants)
@@ -37,18 +38,21 @@ GrappleHandler.__index = GrappleHandler
 
 function GrappleHandler.new(rootPart)
 	local self = setmetatable({
-		_rootPart      = rootPart,
-		_grappling     = false,
-		_attachPoint   = nil,
-		_hookVisual    = nil,
-		_hookAtt       = nil,
-		_beam          = nil,
-		_cooldownUntil = 0,
-		_remote        = nil,
-		_startTime     = 0,   -- os.clock() when grapple started
+		_rootPart       = rootPart,
+		_grappling      = false,
+		_attachPoint    = nil,
+		_hookVisual     = nil,
+		_hookAtt        = nil,
+		_beam           = nil,
+		_linearVelocity = nil,   -- LinearVelocity constraint that owns physics
+		_currentVel     = Vector3.zero, -- tracked internally; not read from part
+		_cooldownUntil  = 0,
+		_remote         = nil,
+		_startTime      = 0,
 	}, GrappleHandler)
 
 	self._handAtt          = Instance.new("Attachment")
+	self._handAtt.Name     = "GrappleHandAtt"
 	self._handAtt.Position = Vector3.new(0.6, 0, -0.4)
 	self._handAtt.Parent   = rootPart
 
@@ -101,6 +105,28 @@ function GrappleHandler:_destroyBeam()
 	if self._hookVisual then self._hookVisual:Destroy(); self._hookVisual = nil end
 end
 
+-- ── LinearVelocity constraint ─────────────────────────────────────────────────
+-- This constraint continuously applies force to maintain VectorVelocity.
+-- MaxForce = 1e6 ensures it dominates the Humanoid's movement forces.
+
+function GrappleHandler:_createLinearVelocity()
+	local lv = Instance.new("LinearVelocity")
+	lv.Name           = "GrapplePull"
+	lv.MaxForce       = 1e6
+	lv.RelativeTo     = Enum.ActuatorRelativeTo.World
+	lv.VectorVelocity = self._currentVel
+	lv.Attachment0    = self._handAtt
+	lv.Parent         = self._rootPart
+	self._linearVelocity = lv
+end
+
+function GrappleHandler:_destroyLinearVelocity()
+	if self._linearVelocity then
+		self._linearVelocity:Destroy()
+		self._linearVelocity = nil
+	end
+end
+
 -- ── Attach / detach ───────────────────────────────────────────────────────────
 
 local function makeParams(character)
@@ -128,8 +154,11 @@ function GrappleHandler:tryGrapple(character, camera)
 	self._attachPoint = result.Position
 	self._grappling   = true
 	self._startTime   = os.clock()
+	-- Seed internal velocity from current part velocity so the pull feels continuous
+	self._currentVel  = self._rootPart.AssemblyLinearVelocity
 
 	self:_createBeam(result.Position)
+	self:_createLinearVelocity()
 
 	if self._remote then
 		self._remote:FireServer(result.Position)
@@ -141,17 +170,17 @@ function GrappleHandler:cancel()
 	self._grappling     = false
 	self._attachPoint   = nil
 	self._cooldownUntil = os.clock() + Constants.COOLDOWN
+	self._currentVel    = Vector3.zero
 	self:_destroyBeam()
+	self:_destroyLinearVelocity()
 end
 
 -- ── Tick (called every Heartbeat while grappling) ─────────────────────────────
 
 function GrappleHandler:tick(dt, rootPart, _grounded)
-	-- _grounded is intentionally ignored — players can grapple from the ground.
-	-- Detach is handled by distance and duration limits only.
 	if not self._grappling then return end
 
-	-- Force-cancel after MAX_DURATION to prevent indefinite grapples
+	-- Force-cancel after MAX_DURATION
 	if os.clock() - self._startTime > Constants.MAX_DURATION then
 		self:cancel()
 		return
@@ -160,21 +189,25 @@ function GrappleHandler:tick(dt, rootPart, _grounded)
 	local toHook = self._attachPoint - rootPart.Position
 	local dist   = toHook.Magnitude
 
-	-- Auto-detach when close enough to the hook
+	-- Auto-detach when close enough
 	if dist < Constants.MIN_DETACH_DIST then
 		self:cancel()
 		return
 	end
 
-	-- Compute pull velocity
-	local pullDir = toHook.Unit
-	local vel     = rootPart.AssemblyLinearVelocity + pullDir * Constants.PULL_ACCEL * dt
+	-- Accumulate pull velocity internally (do NOT read AssemblyLinearVelocity —
+	-- it lags behind the LinearVelocity target and creates feedback instability)
+	local pullDir    = toHook.Unit
+	self._currentVel = self._currentVel + pullDir * Constants.PULL_ACCEL * dt
 
-	if vel.Magnitude > Constants.MAX_PULL_SPEED then
-		vel = vel.Unit * Constants.MAX_PULL_SPEED
+	if self._currentVel.Magnitude > Constants.MAX_PULL_SPEED then
+		self._currentVel = self._currentVel.Unit * Constants.MAX_PULL_SPEED
 	end
 
-	rootPart.AssemblyLinearVelocity = vel
+	-- Push target velocity into the constraint
+	if self._linearVelocity then
+		self._linearVelocity.VectorVelocity = self._currentVel
+	end
 end
 
 -- ── Queries ───────────────────────────────────────────────────────────────────

@@ -180,7 +180,12 @@ local function setupCharacter(character)
 		local curVel     = currentRoot.AssemblyLinearVelocity
 		local horizontal = MovementResolver.resolve(state, inp, curVel, dt)
 
-		physicsApplier:applyVelocity(horizontal)
+		-- During grapple the LinearVelocity constraint owns physics entirely.
+		-- Calling applyVelocity would set WalkSpeed=0 and humanoid:Move(zero),
+		-- which tells the Humanoid to brake — fighting the constraint.
+		if not inp.isGrappling then
+			physicsApplier:applyVelocity(horizontal)
+		end
 		animHandler:update(state)
 		alignToCamera()
 
