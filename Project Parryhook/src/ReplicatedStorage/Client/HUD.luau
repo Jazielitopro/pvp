@@ -141,13 +141,27 @@ local hpNum = label(hpPanel,
 	UDim2.new(0, 206, 0.5, -14),
 	"100", C.textWhite, Enum.Font.GothamBold, Enum.TextXAlignment.Right)
 
-local BAR_TWEEN = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local BAR_TWEEN   = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local FLASH_TWEEN = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local FLASH_OUT   = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+
+-- Full-screen red vignette that flashes when taking damage
+local damageFlash = Instance.new("Frame")
+damageFlash.Name                   = "DamageFlash"
+damageFlash.Size                   = UDim2.fromScale(1, 1)
+damageFlash.BackgroundColor3       = Color3.fromRGB(200, 20, 20)
+damageFlash.BackgroundTransparency = 1
+damageFlash.BorderSizePixel        = 0
+damageFlash.ZIndex                 = 20
+damageFlash.Parent                 = screen
 
 local function hpColor(pct)
 	if pct > 0.6 then return C.hpHigh
 	elseif pct > 0.3 then return C.hpMid
 	else return C.hpLow end
 end
+
+local lastHp = 100
 
 -- ── Ammo panel (bottom-right) ─────────────────────────────────────────────────
 
@@ -344,6 +358,20 @@ function HUD.setHP(hp, maxHp)
 		Size             = UDim2.new(pct, 0, 1, 0),
 		BackgroundColor3 = hpColor(pct),
 	}):Play()
+
+	-- Red vignette flash when taking damage (not on heal/init)
+	if hp < lastHp then
+		local intensity = math.clamp((lastHp - hp) / maxHp, 0.05, 0.55)
+		TweenService:Create(damageFlash, FLASH_TWEEN, {
+			BackgroundTransparency = 1 - intensity,
+		}):Play()
+		task.delay(0.08, function()
+			TweenService:Create(damageFlash, FLASH_OUT, {
+				BackgroundTransparency = 1,
+			}):Play()
+		end)
+	end
+	lastHp = hp
 end
 
 function HUD.setAmmo(ammo, maxAmmo, isReloading)
