@@ -2,10 +2,11 @@
 -- Shared between client and server. Edit values here to tune grapple feel.
 
 return {
-	MAX_RANGE       = 80,    -- studs, maximum raycast distance
-	PULL_ACCEL      = 130,   -- studs/s² — acceleration toward hook each frame
-	MAX_PULL_SPEED  = 90,    -- studs/s — velocity cap while grappling
-	COOLDOWN        = 2.5,   -- seconds after detach before next grapple
-	MIN_DETACH_DIST = 5,     -- studs — auto-detach when this close to hook
-	KEY             = Enum.KeyCode.F,
+	MAX_RANGE        = 80,   -- studs, maximum raycast distance
+	PULL_ACCEL       = 520,  -- studs/s² — acceleration toward hook each frame (was 130, felt sluggish)
+	MAX_PULL_SPEED   = 130,  -- studs/s — velocity cap while grappling (was 90)
+	COOLDOWN         = 1.8,  -- seconds after detach before next grapple
+	MIN_DETACH_DIST  = 4,    -- studs — auto-detach when this close to hook
+	MAX_DURATION     = 6,    -- seconds — force-cancel if grapple lasts too long
+	KEY              = Enum.KeyCode.F,
 }

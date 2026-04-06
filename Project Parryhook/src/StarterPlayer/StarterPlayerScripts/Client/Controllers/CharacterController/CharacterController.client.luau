@@ -1,10 +1,11 @@
 -- CharacterController (LocalScript)
 -- Entry point for client-side movement.
--- Wires InputHandler → StateManager → MovementResolver → PhysicsApplier each frame.
+-- Supports full respawn: re-initializes every time CharacterAdded fires.
+-- Each death cleans up the previous character's handlers before setting up new ones.
 
-local RunService      = game:GetService("RunService")
+local RunService       = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local Players         = game:GetService("Players")
+local Players          = game:GetService("Players")
 
 local InputHandler      = require(script.InputHandler)
 local StateManager      = require(script.StateManager)
@@ -17,187 +18,187 @@ local CameraController  = require(script.CameraController)
 local AnimationHandler  = require(script.AnimationHandler)
 local Constants         = require(game.ReplicatedStorage.Shared.Constants.MovementConstants)
 
-local player  = Players.LocalPlayer
-local camera  = workspace.CurrentCamera
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
 
--- Wait for character to be fully ready (including RootPart and RootJoint)
-local character  = player.Character or player.CharacterAdded:Wait()
-local humanoid   = character:WaitForChild("Humanoid")
-local rootPart   = character:WaitForChild("HumanoidRootPart")
+-- ── Per-character setup ───────────────────────────────────────────────────────
+-- Called every time the character spawns (initial spawn + all respawns).
+-- Returns a cleanup function that disconnects everything for that character.
 
--- Wait for RootJoint to exist so AnimationHandler can find it
--- (in R15 it is a Motor6D inside HumanoidRootPart)
-if not rootPart:FindFirstChild("RootJoint") then
-	rootPart.ChildAdded:Wait()
-end
+local function setupCharacter(character)
+	print("[CharacterController] Setting up character for", player.Name)
 
--- Disable auto-rotation and jump — PhysicsApplier manages both dynamically
-humanoid.JumpPower  = 0
-humanoid.AutoRotate = false
+	local humanoid = character:WaitForChild("Humanoid")
+	local rootPart = character:WaitForChild("HumanoidRootPart")
 
--- Initialize modules — movement starts immediately, no blocking calls
-local stateManager      = StateManager.new()
-local physicsApplier    = PhysicsApplier.new(rootPart, humanoid)
-local dashHandler       = DashHandler.new(physicsApplier, nil) -- remote set async below
-
--- Connect dash remote asynchronously so it never blocks movement startup
-task.spawn(function()
-	local remotes = game.ReplicatedStorage:WaitForChild("Remotes", 10)
-	if not remotes then return end
-	local remote = remotes:WaitForChild("DashRequest", 10)
-	if remote then
-		dashHandler:setRemote(remote)
+	-- Wait for RootJoint so AnimationHandler can find it
+	if not rootPart:FindFirstChild("RootJoint") then
+		rootPart:WaitForChild("RootJoint", 5)
 	end
-end)
-local slideHandler      = SlideHandler.new()
-local grappleHandler    = GrappleHandler.new(rootPart)
 
--- Connect grapple remote asynchronously
-task.spawn(function()
-	local remotes = game.ReplicatedStorage:WaitForChild("Remotes", 10)
-	if not remotes then return end
-	local remote = remotes:WaitForChild("GrappleRequest", 10)
-	if remote then
-		grappleHandler:setRemote(remote)
+	humanoid.JumpPower  = 0
+	humanoid.AutoRotate = false
+
+	-- Initialise modules
+	local stateManager   = StateManager.new()
+	local physicsApplier = PhysicsApplier.new(rootPart, humanoid)
+	local dashHandler    = DashHandler.new(physicsApplier, nil)
+
+	-- Connect dash remote asynchronously
+	task.spawn(function()
+		local remotes = game.ReplicatedStorage:WaitForChild("Remotes", 10)
+		if not remotes then return end
+		local remote = remotes:WaitForChild("DashRequest", 10)
+		if remote then dashHandler:setRemote(remote) end
+	end)
+
+	local slideHandler   = SlideHandler.new()
+	local grappleHandler = GrappleHandler.new(rootPart)
+
+	-- Connect grapple remote asynchronously
+	task.spawn(function()
+		local remotes = game.ReplicatedStorage:WaitForChild("Remotes", 10)
+		if not remotes then return end
+		local remote = remotes:WaitForChild("GrappleRequest", 10)
+		if remote then grappleHandler:setRemote(remote) end
+	end)
+
+	local cameraController = CameraController.new(camera, humanoid)
+	local animationHandler = AnimationHandler.new(humanoid)
+
+	cameraController:start(function()
+		return stateManager.current
+	end)
+
+	-- Jump state
+	local jumpBuffered = false
+	local jumpCooldown = false
+
+	-- Ground detection
+	local groundParams = RaycastParams.new()
+	groundParams.FilterDescendantsInstances = { character }
+	groundParams.FilterType = Enum.RaycastFilterType.Exclude
+
+	local function checkGrounded()
+		local result = workspace:Raycast(
+			rootPart.Position,
+			Vector3.new(0, -Constants.GROUND_CHECK_DIST, 0),
+			groundParams
+		)
+		return result ~= nil
 	end
-end)
 
-local cameraController  = CameraController.new(camera, humanoid)
-local animationHandler  = AnimationHandler.new(humanoid)
+	local function alignToCamera()
+		local yaw = math.atan2(-camera.CFrame.LookVector.X, -camera.CFrame.LookVector.Z)
+		rootPart.CFrame = CFrame.new(rootPart.Position) * CFrame.fromEulerAnglesYXZ(0, yaw, 0)
+	end
 
--- Start camera — passes a getter so CameraController always reads the latest state
-cameraController:start(function()
-	return stateManager.current
-end)
+	-- Input events
+	local inputConn = UserInputService.InputBegan:Connect(function(input, processed)
+		if processed then return end
 
--- Jump state
-local jumpBuffered  = false
-local jumpCooldown  = false
+		if input.KeyCode == Enum.KeyCode.Space then
+			if slideHandler:isSliding() then slideHandler:cancel() end
+			jumpBuffered = true
+		end
 
--- Ground detection via downward raycast
-local groundParams = RaycastParams.new()
-groundParams.FilterDescendantsInstances = { character }
-groundParams.FilterType = Enum.RaycastFilterType.Exclude
+		if input.KeyCode == Enum.KeyCode.Q then
+			local cameraForward = Vector3.new(
+				camera.CFrame.LookVector.X,
+				0,
+				camera.CFrame.LookVector.Z
+			).Unit
+			if grappleHandler:isGrappling() then grappleHandler:cancel() end
+			dashHandler:tryDash(InputHandler.getMoveDirection(camera), cameraForward)
+		end
 
-local function checkGrounded()
-	local result = workspace:Raycast(
-		rootPart.Position,
-		Vector3.new(0, -Constants.GROUND_CHECK_DIST, 0),
-		groundParams
-	)
-	return result ~= nil
-end
+		if input.KeyCode == Enum.KeyCode.E then
+			slideHandler:trySlide(InputHandler.getMoveDirection(camera), stateManager.current)
+		end
 
--- Align character Y rotation to camera yaw.
--- Only modifies rotation, NEVER position — prevents physics drift.
--- In first-person: body always faces where the camera looks.
-local function alignToCamera()
-	local yaw = math.atan2(-camera.CFrame.LookVector.X, -camera.CFrame.LookVector.Z)
-	rootPart.CFrame = CFrame.new(rootPart.Position) * CFrame.fromEulerAnglesYXZ(0, yaw, 0)
-end
+		if input.KeyCode == Enum.KeyCode.F then
+			grappleHandler:tryGrapple(character, camera)
+		end
+	end)
 
--- Input events: jump, dash, slide — all handled once per press
-UserInputService.InputBegan:Connect(function(input, processed)
-	if processed then return end
+	-- Main heartbeat loop
+	local heartbeat = RunService.Heartbeat:Connect(function(dt)
+		local grounded = checkGrounded()
 
-	if input.KeyCode == Enum.KeyCode.Space then
-		-- Jump cancels an active slide before buffering
 		if slideHandler:isSliding() then
-			slideHandler:cancel()
+			if not grounded then slideHandler:cancel()
+			else slideHandler:tick(dt) end
 		end
-		jumpBuffered = true
-	end
 
-	if input.KeyCode == Enum.KeyCode.Q then
-		local cameraForward = Vector3.new(
-			camera.CFrame.LookVector.X,
-			0,
-			camera.CFrame.LookVector.Z
-		).Unit
-		-- Dash cancels an active grapple
 		if grappleHandler:isGrappling() then
-			grappleHandler:cancel()
+			grappleHandler:tick(dt, rootPart, grounded)
 		end
-		dashHandler:tryDash(InputHandler.getMoveDirection(camera), cameraForward)
-	end
 
-	if input.KeyCode == Enum.KeyCode.E then
-		-- Pass current state so SlideHandler enforces the SPRINTING entry rule
-		slideHandler:trySlide(InputHandler.getMoveDirection(camera), stateManager.current)
-	end
+		local input = {
+			moveDirection  = InputHandler.getMoveDirection(camera),
+			isSprinting    = InputHandler.isSprinting(),
+			isDashing      = dashHandler:isDashing(),
+			dashDirection  = dashHandler:getDashDirection(),
+			isSliding      = slideHandler:isSliding(),
+			slideDirection = slideHandler:getSlideDirection(),
+			slideProgress  = slideHandler:getProgress(),
+			isGrappling    = grappleHandler:isGrappling(),
+		}
 
-	if input.KeyCode == Enum.KeyCode.F then
-		grappleHandler:tryGrapple(character, camera)
-	end
-end)
+		local state           = stateManager:update(input, grounded)
+		local currentVelocity = rootPart.AssemblyLinearVelocity
+		local horizontal      = MovementResolver.resolve(state, input, currentVelocity, dt)
 
--- Main update loop
-local heartbeat = RunService.Heartbeat:Connect(function(dt)
-	local grounded = checkGrounded()
+		physicsApplier:applyVelocity(horizontal)
+		animationHandler:update(state)
+		alignToCamera()
 
-	-- Advance slide timer each frame; cancel if player leaves the ground
-	if slideHandler:isSliding() then
-		if not grounded then
-			slideHandler:cancel()
+		if state == "sliding" then
+			humanoid.HipHeight = Constants.SLIDE_HIP_HEIGHT
 		else
-			slideHandler:tick(dt)
+			humanoid.HipHeight = Constants.NORMAL_HIP_HEIGHT
 		end
+
+		if jumpBuffered and grounded and not jumpCooldown then
+			physicsApplier:applyJump()
+			jumpBuffered = false
+			jumpCooldown = true
+			task.delay(0.3, function() jumpCooldown = false end)
+		end
+
+		if not grounded then jumpBuffered = false end
+	end)
+
+	-- Return cleanup — called when this character is removed
+	return function()
+		heartbeat:Disconnect()
+		inputConn:Disconnect()
+		physicsApplier:destroy()
+		cameraController:stop()
+		animationHandler:destroy()
+		grappleHandler:destroy()
+		print("[CharacterController] Cleaned up character for", player.Name)
 	end
+end
 
-	-- Advance grapple pull each frame
-	if grappleHandler:isGrappling() then
-		grappleHandler:tick(dt, rootPart, grounded)
+-- ── Respawn loop ──────────────────────────────────────────────────────────────
+
+local cleanup = nil
+
+local function onCharacterAdded(character)
+	-- Clean up the previous character's connections before setting up the new one
+	if cleanup then
+		cleanup()
+		cleanup = nil
 	end
+	-- Small wait to ensure the character hierarchy is fully replicated
+	task.wait(0.1)
+	cleanup = setupCharacter(character)
+end
 
-	local input = {
-		moveDirection  = InputHandler.getMoveDirection(camera),
-		isSprinting    = InputHandler.isSprinting(),
-		isDashing      = dashHandler:isDashing(),
-		dashDirection  = dashHandler:getDashDirection(),
-		isSliding      = slideHandler:isSliding(),
-		slideDirection = slideHandler:getSlideDirection(),
-		slideProgress  = slideHandler:getProgress(),
-		isGrappling    = grappleHandler:isGrappling(),
-	}
+player.CharacterAdded:Connect(onCharacterAdded)
 
-	local state           = stateManager:update(input, grounded)
-	local currentVelocity = rootPart.AssemblyLinearVelocity
-	local horizontal      = MovementResolver.resolve(state, input, currentVelocity, dt)
-
-	physicsApplier:applyVelocity(horizontal)
-	animationHandler:update(state)
-
-	-- Align body to camera every frame (first-person standard)
-	alignToCamera()
-
-	-- Crouch effect: lower HipHeight while sliding, restore otherwise
-	if state == "sliding" then
-		humanoid.HipHeight = Constants.SLIDE_HIP_HEIGHT
-	else
-		humanoid.HipHeight = Constants.NORMAL_HIP_HEIGHT
-	end
-
-	-- Jump: only when grounded, buffered input, and not on cooldown
-	if jumpBuffered and grounded and not jumpCooldown then
-		physicsApplier:applyJump() -- sets JumpPower + ChangeState internally
-		jumpBuffered = false
-		jumpCooldown = true
-		task.delay(0.3, function()
-			jumpCooldown = false
-		end)
-	end
-
-	-- Clear buffer if player left the ground without jumping (walked off edge)
-	if not grounded then
-		jumpBuffered = false
-	end
-end)
-
--- Cleanup when character is removed (respawn)
-player.CharacterRemoving:Connect(function()
-	heartbeat:Disconnect()
-	physicsApplier:destroy()
-	cameraController:stop()
-	animationHandler:destroy()
-	grappleHandler:destroy()
-end)
+-- Handle the character that may already exist when this script first runs
+if player.Character then
+	onCharacterAdded(player.Character)
+end

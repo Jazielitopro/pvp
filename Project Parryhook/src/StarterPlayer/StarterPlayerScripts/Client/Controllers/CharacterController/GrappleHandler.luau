@@ -5,15 +5,20 @@
 --
 -- Visual: straight Beam rope + small glowing sphere at hook point.
 -- Server is notified via GrappleRequest (recorded for CharacterValidator).
+--
+-- Detach conditions (in priority order):
+--   1. Press F again while grappling (toggle)
+--   2. Reach MIN_DETACH_DIST of the hook
+--   3. MAX_DURATION seconds elapsed
+-- NOTE: grounded no longer auto-cancels — players can grapple from the ground.
 
-local Players  = game:GetService("Players")
+local Players   = game:GetService("Players")
 local Constants = require(game.ReplicatedStorage.Shared.Constants.GrappleConstants)
 
 local player = Players.LocalPlayer
 
 -- ── Helpers ───────────────────────────────────────────────────────────────────
 
--- Returns true if `instance` is part of any player's character.
 local function isPlayerCharacter(instance)
 	local ancestor = instance
 	while ancestor do
@@ -30,7 +35,6 @@ end
 local GrappleHandler = {}
 GrappleHandler.__index = GrappleHandler
 
--- rootPart : HumanoidRootPart — used for physics and beam origin
 function GrappleHandler.new(rootPart)
 	local self = setmetatable({
 		_rootPart      = rootPart,
@@ -41,10 +45,9 @@ function GrappleHandler.new(rootPart)
 		_beam          = nil,
 		_cooldownUntil = 0,
 		_remote        = nil,
+		_startTime     = 0,   -- os.clock() when grapple started
 	}, GrappleHandler)
 
-	-- Permanent hand attachment: Beam origin, parented to the root part.
-	-- Offset slightly right and forward so the rope appears to come from the hand.
 	self._handAtt          = Instance.new("Attachment")
 	self._handAtt.Position = Vector3.new(0.6, 0, -0.4)
 	self._handAtt.Parent   = rootPart
@@ -59,7 +62,6 @@ end
 -- ── Beam visual ───────────────────────────────────────────────────────────────
 
 function GrappleHandler:_createBeam(attachPoint)
-	-- Hook point: small glowing sphere at impact location
 	local hook           = Instance.new("Part")
 	hook.Name            = "GrappleHook"
 	hook.Anchored        = true
@@ -75,7 +77,6 @@ function GrappleHandler:_createBeam(attachPoint)
 	local hookAtt        = Instance.new("Attachment")
 	hookAtt.Parent       = hook
 
-	-- Rope beam between hand and hook
 	local beam              = Instance.new("Beam")
 	beam.Attachment0        = self._handAtt
 	beam.Attachment1        = hookAtt
@@ -102,7 +103,6 @@ end
 
 -- ── Attach / detach ───────────────────────────────────────────────────────────
 
--- Returns a RaycastParams that excludes the local player's character.
 local function makeParams(character)
 	local p = RaycastParams.new()
 	p.FilterType = Enum.RaycastFilterType.Exclude
@@ -110,8 +110,8 @@ local function makeParams(character)
 	return p
 end
 
--- Called on F key press. Toggles grapple on/off.
 function GrappleHandler:tryGrapple(character, camera)
+	-- Toggle off
 	if self._grappling then
 		self:cancel()
 		return
@@ -119,43 +119,40 @@ function GrappleHandler:tryGrapple(character, camera)
 
 	if os.clock() < self._cooldownUntil then return end
 
-	-- Raycast from camera position along look vector
 	local origin = camera.CFrame.Position
 	local dir    = camera.CFrame.LookVector
-
 	local result = workspace:Raycast(origin, dir * Constants.MAX_RANGE, makeParams(character))
 	if not result then return end
-
-	-- Reject player characters — environment only in MVP
 	if isPlayerCharacter(result.Instance) then return end
 
 	self._attachPoint = result.Position
 	self._grappling   = true
+	self._startTime   = os.clock()
 
 	self:_createBeam(result.Position)
 
-	-- Notify server (recorded for CharacterValidator speed checks)
 	if self._remote then
 		self._remote:FireServer(result.Position)
 	end
 end
 
--- Force-cancel grapple (e.g. called by dash input).
 function GrappleHandler:cancel()
 	if not self._grappling then return end
-	self._grappling   = false
-	self._attachPoint = nil
+	self._grappling     = false
+	self._attachPoint   = nil
 	self._cooldownUntil = os.clock() + Constants.COOLDOWN
 	self:_destroyBeam()
 end
 
--- ── Tick (called every Heartbeat while GRAPPLING state is active) ─────────────
+-- ── Tick (called every Heartbeat while grappling) ─────────────────────────────
 
-function GrappleHandler:tick(dt, rootPart, grounded)
+function GrappleHandler:tick(dt, rootPart, _grounded)
+	-- _grounded is intentionally ignored — players can grapple from the ground.
+	-- Detach is handled by distance and duration limits only.
 	if not self._grappling then return end
 
-	-- Auto-detach when player lands
-	if grounded then
+	-- Force-cancel after MAX_DURATION to prevent indefinite grapples
+	if os.clock() - self._startTime > Constants.MAX_DURATION then
 		self:cancel()
 		return
 	end
@@ -163,15 +160,15 @@ function GrappleHandler:tick(dt, rootPart, grounded)
 	local toHook = self._attachPoint - rootPart.Position
 	local dist   = toHook.Magnitude
 
-	-- Auto-detach when close enough
+	-- Auto-detach when close enough to the hook
 	if dist < Constants.MIN_DETACH_DIST then
 		self:cancel()
 		return
 	end
 
-	-- Apply pull: add acceleration toward hook, cap total speed
-	local pullDir  = toHook.Unit
-	local vel      = rootPart.AssemblyLinearVelocity + pullDir * Constants.PULL_ACCEL * dt
+	-- Compute pull velocity
+	local pullDir = toHook.Unit
+	local vel     = rootPart.AssemblyLinearVelocity + pullDir * Constants.PULL_ACCEL * dt
 
 	if vel.Magnitude > Constants.MAX_PULL_SPEED then
 		vel = vel.Unit * Constants.MAX_PULL_SPEED
