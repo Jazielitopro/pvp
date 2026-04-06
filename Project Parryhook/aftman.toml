@@ -1,0 +1,5 @@
+# Aftman toolchain manifest for Parryhook
+# Run `aftman install` once to make all tools available in this project.
+
+[tools]
+rojo = "rojo-rbx/rojo@7.7.0-rc.1"
