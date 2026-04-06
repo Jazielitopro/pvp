@@ -17,14 +17,19 @@ local TweenService = game:GetService("TweenService")
 local player    = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
-local remotes          = game.ReplicatedStorage:WaitForChild("Remotes")
-local scoreUpdated     = remotes:WaitForChild("ScoreUpdated")
-local matchStarted     = remotes:WaitForChild("MatchStarted")
-local matchEnded       = remotes:WaitForChild("MatchEnded")
-local playerDied       = remotes:WaitForChild("PlayerDied")
-local intermissionTick = remotes:WaitForChild("IntermissionTick")
-local modeSelectedEvt  = remotes:WaitForChild("ModeSelected")
-local teamAssignedEvt  = remotes:WaitForChild("TeamAssigned")
+local remotes          = game.ReplicatedStorage:WaitForChild("Remotes", 15)
+if not remotes then error("[MatchController] Remotes folder not found — RemoteSetup may not have run") end
+
+local scoreUpdated     = remotes:WaitForChild("ScoreUpdated",     15)
+local matchStarted     = remotes:WaitForChild("MatchStarted",     15)
+local matchEnded       = remotes:WaitForChild("MatchEnded",       15)
+local playerDied       = remotes:WaitForChild("PlayerDied",       15)
+local intermissionTick = remotes:WaitForChild("IntermissionTick", 15)
+-- ModeSelected and TeamAssigned are new — warn clearly if missing instead of hanging forever
+local modeSelectedEvt  = remotes:WaitForChild("ModeSelected", 10)
+local teamAssignedEvt  = remotes:WaitForChild("TeamAssigned",  10)
+if not modeSelectedEvt then warn("[MatchController] ModeSelected remote missing — create it in Studio under Remotes") end
+if not teamAssignedEvt then warn("[MatchController] TeamAssigned remote missing — create it in Studio under Remotes") end
 
 local MatchConstants = require(game.ReplicatedStorage.Shared.Constants.MatchConstants)
 local HUD            = require(game.ReplicatedStorage.Client.HUD)
@@ -384,19 +389,22 @@ end)
 
 -- ── Remote: ModeSelected ─────────────────────────────────────────────────────
 
-modeSelectedEvt.OnClientEvent:Connect(function(modeKey, modeName, modeDesc, isTeamBased, scoreLimit)
-	activeModeKey = modeKey
-	print(string.format("[MatchController] Mode: %s — %s (limit: %d)",
-		modeKey, modeName, scoreLimit or 0))
-	-- Team banner is triggered separately via TeamAssigned
-end)
+if modeSelectedEvt then
+	modeSelectedEvt.OnClientEvent:Connect(function(modeKey, modeName, modeDesc, isTeamBased, scoreLimit)
+		activeModeKey = modeKey
+		print(string.format("[MatchController] Mode: %s — %s (limit: %d)",
+			modeKey, modeName, scoreLimit or 0))
+	end)
+end
 
 -- ── Remote: TeamAssigned ──────────────────────────────────────────────────────
 
-teamAssignedEvt.OnClientEvent:Connect(function(team)
-	print(string.format("[MatchController] Assigned to Team %s", team))
-	showTeamBanner(team)
-end)
+if teamAssignedEvt then
+	teamAssignedEvt.OnClientEvent:Connect(function(team)
+		print(string.format("[MatchController] Assigned to Team %s", team))
+		showTeamBanner(team)
+	end)
+end
 
 -- ── Remote: ScoreUpdated ─────────────────────────────────────────────────────
 

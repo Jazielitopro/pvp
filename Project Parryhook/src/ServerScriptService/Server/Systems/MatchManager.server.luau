@@ -57,6 +57,16 @@ local endMatch
 local startIntermission
 local enterWaiting
 
+-- ── Safe thread cancel ────────────────────────────────────────────────────────
+-- task.cancel() throws if the thread has already finished naturally.
+-- This wrapper silences that error so state transitions are always safe.
+
+local function safeCancel(thread)
+	if thread then
+		pcall(task.cancel, thread)
+	end
+end
+
 -- ── Score helpers ─────────────────────────────────────────────────────────────
 
 local function buildScorePayload()
@@ -122,7 +132,7 @@ end
 
 startMatch = function()
 	if matchState == ACTIVE then return end
-	if countdownThread then task.cancel(countdownThread); countdownThread = nil end
+	safeCancel(countdownThread); countdownThread = nil
 	matchState = ACTIVE
 
 	-- Select mode for this round based on current player count
@@ -154,7 +164,7 @@ startMatch = function()
 
 	-- Optional round timer
 	if currentMode.roundDuration > 0 then
-		if timerThread then task.cancel(timerThread) end
+		safeCancel(timerThread)
 		timerThread = task.delay(currentMode.roundDuration, function()
 			if matchState ~= ACTIVE then return end
 			-- Time expired: find winner by kill count / team score
@@ -176,7 +186,7 @@ end
 endMatch = function(winner, winnerTeam, reason)
 	if matchState == ENDED then return end
 	matchState = ENDED
-	if timerThread then task.cancel(timerThread); timerThread = nil end
+	safeCancel(timerThread); timerThread = nil
 
 	local winnerName
 	if currentMode and currentMode.teamBased then
@@ -203,7 +213,7 @@ end
 
 startIntermission = function()
 	if matchState == INTERMISSION or matchState == ACTIVE then return end
-	if countdownThread then task.cancel(countdownThread); countdownThread = nil end
+	safeCancel(countdownThread); countdownThread = nil
 	matchState = INTERMISSION
 
 	-- Pre-select mode so the client can show it during the countdown
@@ -230,6 +240,10 @@ startIntermission = function()
 
 		if matchState ~= INTERMISSION then return end
 
+		-- !! nil BEFORE transitioning: startMatch/enterWaiting would otherwise
+		-- try to safeCancel this thread while it is still running (self-cancel).
+		countdownThread = nil
+
 		if #Players:GetPlayers() >= Constants.MIN_PLAYERS then
 			startMatch()
 		else
@@ -239,8 +253,8 @@ startIntermission = function()
 end
 
 enterWaiting = function()
-	if countdownThread then task.cancel(countdownThread); countdownThread = nil end
-	if timerThread     then task.cancel(timerThread);     timerThread     = nil end
+	safeCancel(countdownThread); countdownThread = nil
+	safeCancel(timerThread);     timerThread     = nil
 	matchState  = WAITING
 	currentMode = nil
 	print("[MatchManager] Waiting for players...")
@@ -256,6 +270,8 @@ enterWaiting = function()
 			})
 			task.wait(1)
 		end
+		-- Clear ref when loop exits naturally (state changed externally)
+		if countdownThread ~= nil then countdownThread = nil end
 	end)
 end
 
@@ -320,10 +336,10 @@ Players.PlayerRemoving:Connect(function(player)
 
 	if remaining < Constants.MIN_PLAYERS then
 		if matchState == ACTIVE then
-			if timerThread then task.cancel(timerThread); timerThread = nil end
+			safeCancel(timerThread); timerThread = nil
 			enterWaiting()
 		elseif matchState == INTERMISSION then
-			if countdownThread then task.cancel(countdownThread); countdownThread = nil end
+			safeCancel(countdownThread); countdownThread = nil
 			enterWaiting()
 		end
 	end
