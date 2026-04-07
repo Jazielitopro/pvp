@@ -3,10 +3,15 @@
 -- faster than the allowed maximum. Runs silently — no client notification.
 -- Handles DashRequest: validates cooldown and opens a speed window so the
 -- dash burst is not incorrectly flagged as a cheat.
+-- Handles GrappleRequest: opens a speed window for the entire grapple
+-- duration so the LinearVelocity pull is not flagged as a cheat.
+-- Resets position baseline on CharacterAdded to prevent false violations
+-- caused by the respawn teleport.
 
-local Players    = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Constants  = require(game.ReplicatedStorage.Shared.Constants.MovementConstants)
+local Players         = game:GetService("Players")
+local RunService      = game:GetService("RunService")
+local Constants       = require(game.ReplicatedStorage.Shared.Constants.MovementConstants)
+local GrappleConstants = require(game.ReplicatedStorage.Shared.Constants.GrappleConstants)
 
 local MAX_ALLOWED_SPEED = Constants.SPRINT_SPEED * Constants.MAX_SPEED_TOLERANCE
 
@@ -16,12 +21,16 @@ local lastValid = {}
 -- [Player] = expiry os.clock() timestamp while dash speed window is open
 local dashWindows = {}
 
+-- [Player] = expiry os.clock() timestamp while grapple speed window is open
+local grappleWindows = {}
+
 -- [Player] = os.clock() of last server-validated dash (server-side cooldown)
 local dashCooldowns = {}
 
--- DashRequest handler
-local remotes    = game.ReplicatedStorage:WaitForChild("Remotes")
-local dashRequest = remotes:WaitForChild("DashRequest")
+-- DashRequest / GrappleRequest handlers
+local remotes      = game.ReplicatedStorage:WaitForChild("Remotes")
+local dashRequest  = remotes:WaitForChild("DashRequest")
+local grappleRequest = remotes:WaitForChild("GrappleRequest")
 
 dashRequest.OnServerEvent:Connect(function(player, direction)
 	-- Validate direction is a unit vector on the XZ plane (reject spoofed values)
@@ -57,6 +66,34 @@ dashRequest.OnServerEvent:Connect(function(player, direction)
 		player.Name, Constants.DASH_DURATION + 0.1))
 end)
 
+-- Grapple speed window: the LinearVelocity constraint can push the character well
+-- above MAX_ALLOWED_SPEED. Open a window for MAX_DURATION + 2s of momentum bleed-off.
+grappleRequest.OnServerEvent:Connect(function(player, _attachPoint)
+	local now = os.clock()
+	local windowLen = GrappleConstants.MAX_DURATION + 2
+	grappleWindows[player] = now + windowLen
+	print(string.format("[Validator] %s grapple started — speed window open for %.1fs",
+		player.Name, windowLen))
+end)
+
+-- ── Respawn baseline reset ────────────────────────────────────────────────────
+-- When a character respawns it teleports from the death position to the spawn
+-- point in one frame, producing a huge apparent speed.  Clearing lastValid
+-- forces validate() to establish a fresh baseline at the new spawn position.
+
+local function connectCharacterAdded(player)
+	player.CharacterAdded:Connect(function()
+		lastValid[player] = nil
+		print(string.format("[Validator] %s character spawned — position baseline reset", player.Name))
+	end)
+end
+
+Players.PlayerAdded:Connect(connectCharacterAdded)
+
+for _, player in Players:GetPlayers() do
+	connectCharacterAdded(player)
+end
+
 local function validate(player)
 	local character = player.Character
 	if not character then return end
@@ -78,11 +115,13 @@ local function validate(player)
 
 	local speed = (current - record.position).Magnitude / dt
 
-	-- Skip speed check during an active server-validated dash window
-	local dashExpiry = dashWindows[player]
-	local inDashWindow = dashExpiry and now < dashExpiry
+	-- Skip speed check during an active server-validated dash or grapple window
+	local dashExpiry    = dashWindows[player]
+	local grappleExpiry = grappleWindows[player]
+	local inSpeedWindow = (dashExpiry    and now < dashExpiry)
+	                   or (grappleExpiry and now < grappleExpiry)
 
-	if speed > MAX_ALLOWED_SPEED and not inDashWindow then
+	if speed > MAX_ALLOWED_SPEED and not inSpeedWindow then
 		warn(string.format("[Validator] %s speed violation — %.1f studs/s > %.1f max — reset to last valid",
 			player.Name, speed, MAX_ALLOWED_SPEED))
 		-- Return to last valid position without touching Y (preserve fall state)
@@ -105,9 +144,10 @@ RunService.Heartbeat:Connect(function()
 end)
 
 Players.PlayerRemoving:Connect(function(player)
-	lastValid[player]     = nil
-	dashWindows[player]   = nil
-	dashCooldowns[player] = nil
+	lastValid[player]      = nil
+	dashWindows[player]    = nil
+	grappleWindows[player] = nil
+	dashCooldowns[player]  = nil
 	print(string.format("[Validator] Cleaned up state for %s", player.Name))
 end)
 

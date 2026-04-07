@@ -33,11 +33,25 @@ AnimationHandler.__index = AnimationHandler
 function AnimationHandler.new(humanoid)
 	-- RootJoint connects HumanoidRootPart → LowerTorso in R15.
 	-- Tweening its C0 tilts the entire character body.
+	--
+	-- humanoid.RootPart may not be assigned yet when this constructor runs,
+	-- so fall back to searching the character model directly.
+	local character = humanoid.Parent
 	local rootPart  = humanoid.RootPart
-	local rootJoint = rootPart and rootPart:FindFirstChild("RootJoint")
+	                  or (character and character:FindFirstChild("HumanoidRootPart"))
+
+	-- RootJoint can also lag slightly behind HumanoidRootPart appearing.
+	-- Wait up to 5 s before giving up so poses are available for the full session.
+	local rootJoint = nil
+	if rootPart then
+		rootJoint = rootPart:FindFirstChild("RootJoint")
+		if not rootJoint then
+			rootJoint = rootPart:WaitForChild("RootJoint", 5)
+		end
+	end
 
 	if not rootJoint then
-		warn("AnimationHandler: RootJoint not found — poses disabled.")
+		warn("[Anim] RootJoint not found — poses disabled.")
 	end
 
 	local defaultC0 = rootJoint and rootJoint.C0 or CFrame.new()
