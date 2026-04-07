@@ -59,11 +59,13 @@ dashRequest.OnServerEvent:Connect(function(player, direction)
 		return
 	end
 
-	-- Record cooldown and open speed window for the dash duration + small buffer
+	-- Record cooldown and open speed window for dash duration + momentum bleed-off.
+	-- 0.1 s was too short — dash velocity (75 studs/s) takes ~0.5 s to decay below
+	-- the validator threshold, so violations fired immediately after the window closed.
 	dashCooldowns[player] = now
-	dashWindows[player]   = now + Constants.DASH_DURATION + 0.1
+	dashWindows[player]   = now + Constants.DASH_DURATION + 0.5
 	print(string.format("[Validator] %s dash accepted — speed window open for %.2fs",
-		player.Name, Constants.DASH_DURATION + 0.1))
+		player.Name, Constants.DASH_DURATION + 0.5))
 end)
 
 -- Grapple speed window: the LinearVelocity constraint can push the character well

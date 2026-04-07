@@ -46,6 +46,7 @@ return {
 	BOB_LERP_SPEED      = 10,   -- how fast bob fades in/out between states
 
 	-- Physics / detection
-	GROUND_CHECK_DIST   = 2.5,  -- raycast length downward from RootPart
-	MAX_SPEED_TOLERANCE = 1.5,  -- server validator: multiplier above SPRINT_SPEED before correcting
+	GROUND_CHECK_DIST   = 2.5,  -- raycast length downward from RootPart (unused — now uses FloorMaterial)
+	MAX_SPEED_TOLERANCE = 2.1,  -- server validator: multiplier above SPRINT_SPEED before correcting
+	                            -- 28 × 2.1 = 58.8 studs/s — covers slide entry (52) with headroom
 }

@@ -40,15 +40,10 @@ function AnimationHandler.new(humanoid)
 	local rootPart  = humanoid.RootPart
 	                  or (character and character:FindFirstChild("HumanoidRootPart"))
 
-	-- RootJoint can also lag slightly behind HumanoidRootPart appearing.
-	-- Wait up to 5 s before giving up so poses are available for the full session.
-	local rootJoint = nil
-	if rootPart then
-		rootJoint = rootPart:FindFirstChild("RootJoint")
-		if not rootJoint then
-			rootJoint = rootPart:WaitForChild("RootJoint", 5)
-		end
-	end
+	-- RootJoint (Motor6D that tilts the whole body) may not exist in custom rigs.
+	-- Use FindFirstChild only — never yield here, as blocking setup delays all
+	-- movement for the entire wait duration (up to 5 s) for no gameplay benefit.
+	local rootJoint = rootPart and rootPart:FindFirstChild("RootJoint")
 
 	if not rootJoint then
 		warn("[Anim] RootJoint not found — poses disabled.")

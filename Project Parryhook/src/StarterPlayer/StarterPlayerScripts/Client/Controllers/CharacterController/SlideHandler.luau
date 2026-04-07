@@ -17,6 +17,7 @@ function SlideHandler.new()
 		_slideDirection = Vector3.zero,
 		_progress       = 0,       -- 0 (start) → 1 (end of slide)
 		_elapsed        = 0,
+		_startTime      = 0,       -- os.clock() at slide entry (for grace-period checks)
 	}, SlideHandler)
 end
 
@@ -37,12 +38,13 @@ function SlideHandler:trySlide(moveDirection, currentState)
 	self._isSliding      = true
 	self._elapsed        = 0
 	self._progress       = 0
+	self._startTime      = os.clock()
 	self._slideDirection = moveDirection.Magnitude > 0
 		and moveDirection
 		or Vector3.new(0, 0, -1) -- fallback: forward (should not happen from sprint)
 
 	print(string.format("[Slide] Started — dir=(%.2f,%.2f,%.2f) duration=%.2fs",
-		self._slideDirection.X, self._slideDirection.Z, self._slideDirection.Y,
+		self._slideDirection.X, self._slideDirection.Y, self._slideDirection.Z,
 		Constants.SLIDE_DURATION))
 end
 
@@ -96,6 +98,16 @@ end
 
 function SlideHandler:isOnCooldown()
 	return self._onCooldown
+end
+
+-- Seconds since the current slide started (0 when not sliding).
+-- Used by CharacterController to apply a grace period before allowing
+-- the airborne-cancel: the HipHeight transition (2.0 → 0.5 on the first
+-- sliding frame) briefly makes FloorMaterial read Air, which would
+-- otherwise immediately cancel the slide.
+function SlideHandler:getElapsed()
+	if not self._isSliding then return 0 end
+	return os.clock() - self._startTime
 end
 
 return SlideHandler

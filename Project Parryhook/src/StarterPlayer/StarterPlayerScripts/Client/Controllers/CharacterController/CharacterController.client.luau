@@ -37,18 +37,16 @@ local currentRoot    = nil
 local jumpBuffered   = false
 local jumpCooldown   = false
 
-local groundParams = RaycastParams.new()
-groundParams.FilterType = Enum.RaycastFilterType.Exclude
-
 -- ── Ground check ──────────────────────────────────────────────────────────────
+-- Uses Humanoid.FloorMaterial instead of a manual raycast.
+-- The engine updates FloorMaterial every physics step, so it is always accurate
+-- regardless of character scale, HipHeight, or terrain type.
+-- FloorMaterial == Air  →  character is in the air
+-- FloorMaterial != Air  →  character is standing on something
 
 local function checkGrounded()
-	if not currentRoot then return false end
-	return workspace:Raycast(
-		currentRoot.Position,
-		Vector3.new(0, -Constants.GROUND_CHECK_DIST, 0),
-		groundParams
-	) ~= nil
+	if not currentHum then return false end
+	return currentHum.FloorMaterial ~= Enum.Material.Air
 end
 
 -- ── Camera align ──────────────────────────────────────────────────────────────
@@ -121,15 +119,8 @@ local function setupCharacter(character)
 	currentHum  = character:WaitForChild("Humanoid")
 	currentRoot = character:WaitForChild("HumanoidRootPart")
 
-	-- Wait for RootJoint so AnimationHandler can find it without warning
-	if not currentRoot:FindFirstChild("RootJoint") then
-		currentRoot:WaitForChild("RootJoint", 5)
-	end
-
 	currentHum.JumpPower  = 0
 	currentHum.AutoRotate = false
-
-	groundParams.FilterDescendantsInstances = { character }
 
 	-- Build handlers for this character
 	stateManager   = StateManager.new()
@@ -172,8 +163,14 @@ local function setupCharacter(character)
 		local grounded = checkGrounded()
 
 		if slideHandler:isSliding() then
-			if not grounded then slideHandler:cancel()
-			else slideHandler:tick(dt) end
+			-- Grace window: the HipHeight change on the first sliding frame (2.0 → 0.5)
+			-- causes FloorMaterial to briefly read Air on the very next frame.
+			-- Suppress the airborne-cancel for the first 0.15 s so the physics settle.
+			if not grounded and slideHandler:getElapsed() > 0.15 then
+				slideHandler:cancel()
+			else
+				slideHandler:tick(dt)
+			end
 		end
 
 		if grappleHandler:isGrappling() then
