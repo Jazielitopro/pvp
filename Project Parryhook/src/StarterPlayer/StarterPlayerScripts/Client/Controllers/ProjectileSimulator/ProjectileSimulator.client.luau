@@ -14,8 +14,10 @@ local player           = Players.LocalPlayer
 
 local remotes          = game.ReplicatedStorage:WaitForChild("Remotes")
 local spawnProjectile  = remotes:WaitForChild("SpawnProjectile")
+local projectileUpdated = remotes:WaitForChild("ProjectileUpdated")
 local impactEffect     = remotes:WaitForChild("ImpactEffect")
 local WeaponConstants  = require(game.ReplicatedStorage.Shared.Constants.WeaponConstants)
+local EconomyConfig    = require(game.ReplicatedStorage.Shared.Constants.EconomyConfig)
 
 -- ── Active visual bullets ─────────────────────────────────────────────────────
 -- [id] = { part, position, velocity, spawnTime }
@@ -24,12 +26,19 @@ local bullets = {}
 
 -- ── Bullet part factory ───────────────────────────────────────────────────────
 
-local function makeBulletPart(origin, direction)
+local function colorsForSkin(skinId)
+	local cosmetic = EconomyConfig.COSMETICS[skinId or "projectile_default"]
+		or EconomyConfig.COSMETICS.projectile_default
+	return cosmetic.primaryColor, cosmetic.secondaryColor
+end
+
+local function makeBulletPart(origin, direction, skinId)
+	local primaryColor, secondaryColor = colorsForSkin(skinId)
 	local part           = Instance.new("Part")
 	part.Name            = "Bullet"
 	part.Size            = Vector3.new(0.12, 0.12, 0.45)
 	part.Material        = Enum.Material.Neon
-	part.Color           = Color3.fromRGB(255, 215, 80)   -- golden revolver bullet
+	part.Color           = primaryColor
 	part.CastShadow      = false
 	part.CanCollide      = false
 	part.Anchored        = true
@@ -51,7 +60,7 @@ local function makeBulletPart(origin, direction)
 	trail.Lifetime    = 0.06
 	trail.MinLength   = 0
 	trail.FaceCamera  = true
-	trail.Color       = ColorSequence.new(Color3.fromRGB(255, 215, 80), Color3.fromRGB(255, 140, 30))
+	trail.Color       = ColorSequence.new(primaryColor, secondaryColor)
 	trail.Transparency = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0),
 		NumberSequenceKeypoint.new(1, 1),
@@ -66,17 +75,41 @@ print("[ClientProjectile] Initialized for", player.Name)
 
 -- ── Spawn handler ─────────────────────────────────────────────────────────────
 
-spawnProjectile.OnClientEvent:Connect(function(id, ownerId, origin, direction, speed)
+local function colorForKind(kind)
+	if kind == "perfect" or kind == "perfect_clash" then
+		return Color3.fromRGB(80, 240, 255)
+	elseif kind == "clash" then
+		return Color3.fromRGB(255, 90, 90)
+	elseif kind == "self_boost" then
+		return Color3.fromRGB(255, 245, 130)
+	end
+	return Color3.fromRGB(255, 215, 80)
+end
+
+spawnProjectile.OnClientEvent:Connect(function(id, ownerId, origin, direction, speed, skinId)
 	print(string.format("[ClientProjectile] Bullet id=%d spawned (ownerId=%d) speed=%.0f",
 		id, ownerId, speed))
-	local part = makeBulletPart(origin, direction)
+	local part = makeBulletPart(origin, direction, skinId)
 
 	bullets[id] = {
 		part      = part,
 		position  = origin,
 		velocity  = direction * speed,
 		spawnTime = os.clock(),
+		skinId    = skinId,
 	}
+end)
+
+projectileUpdated.OnClientEvent:Connect(function(id, _ownerId, position, direction, speed, kind)
+	local bullet = bullets[id]
+	if not bullet then
+		return
+	end
+
+	bullet.position = position
+	bullet.velocity = direction * speed
+	bullet.part.CFrame = CFrame.lookAt(position, position + direction)
+	bullet.part.Color = colorForKind(kind)
 end)
 
 -- ── Simulation (visual only) ──────────────────────────────────────────────────

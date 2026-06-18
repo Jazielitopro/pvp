@@ -17,6 +17,8 @@
 
 local Players      = game:GetService("Players")
 local HealthSystem = require(script.Parent.HealthSystem)
+local StatsTracker = require(script.Parent.StatsTracker)
+local EconomyService = require(script.Parent.EconomyService)
 local Constants    = require(game.ReplicatedStorage.Shared.Constants.MatchConstants)
 local GameModes    = require(game.ReplicatedStorage.Shared.Constants.GameModeConfig)
 
@@ -24,6 +26,10 @@ local remotes          = game.ReplicatedStorage:WaitForChild("Remotes")
 local scoreUpdated     = remotes:WaitForChild("ScoreUpdated")
 local matchStarted     = remotes:WaitForChild("MatchStarted")
 local matchEnded       = remotes:WaitForChild("MatchEnded")
+local matchSummary     = remotes:WaitForChild("MatchSummary")
+local medalAwarded     = remotes:WaitForChild("MedalAwarded")
+local roundContract    = remotes:WaitForChild("RoundContract")
+local contractUpdated  = remotes:WaitForChild("RoundContractUpdated")
 local playerDied       = remotes:WaitForChild("PlayerDied")
 local intermissionTick = remotes:WaitForChild("IntermissionTick")
 local modeSelectedEvt  = remotes:WaitForChild("ModeSelected")
@@ -67,6 +73,21 @@ local function safeCancel(thread)
 	end
 end
 
+StatsTracker.setContractUpdateCallback(function(player, contract)
+	if matchState ~= ACTIVE then return end
+	contractUpdated:FireClient(player, contract)
+end)
+
+StatsTracker.setMedalCallback(function(player, medal)
+	if matchState ~= ACTIVE then return end
+	medalAwarded:FireClient(player, medal)
+end)
+
+StatsTracker.setProgressCallback(function(player, statName, amount)
+	if matchState ~= ACTIVE then return end
+	EconomyService.recordDailyProgress(player, statName, amount)
+end)
+
 -- ── Score helpers ─────────────────────────────────────────────────────────────
 
 local function buildScorePayload()
@@ -91,8 +112,30 @@ end
 local function resetScores()
 	scores     = {}
 	teamScores = { A = 0, B = 0 }
+	StatsTracker.resetRound(Players:GetPlayers())
 	for _, p in ipairs(Players:GetPlayers()) do
 		scores[p.UserId] = 0
+	end
+end
+
+local function recordWinners(winner, winnerTeam)
+	if winner then
+		StatsTracker.recordWin(winner)
+		return
+	end
+
+	if winnerTeam then
+		for _, p in ipairs(Players:GetPlayers()) do
+			if playerTeams[p.UserId] == winnerTeam then
+				StatsTracker.recordWin(p)
+			end
+		end
+	end
+end
+
+local function sendRoundContracts()
+	for _, player in ipairs(Players:GetPlayers()) do
+		roundContract:FireClient(player, StatsTracker.getContract(player))
 	end
 end
 
@@ -130,6 +173,42 @@ end
 
 -- ── Match lifecycle ───────────────────────────────────────────────────────────
 
+local function resolveTimeWinner()
+	if not currentMode then
+		return nil, nil
+	end
+
+	if currentMode.teamBased then
+		local aScore = teamScores.A or 0
+		local bScore = teamScores.B or 0
+		if aScore > bScore then
+			return nil, "A"
+		end
+		if bScore > aScore then
+			return nil, "B"
+		end
+		return nil, nil
+	end
+
+	local topKills = -1
+	local leaders = {}
+	for _, p in ipairs(Players:GetPlayers()) do
+		local kills = scores[p.UserId] or 0
+		if kills > topKills then
+			topKills = kills
+			leaders = { p }
+		elseif kills == topKills then
+			table.insert(leaders, p)
+		end
+	end
+
+	if #leaders == 1 then
+		return leaders[1], nil
+	end
+
+	return nil, nil
+end
+
 startMatch = function()
 	if matchState == ACTIVE then return end
 	safeCancel(countdownThread); countdownThread = nil
@@ -151,7 +230,6 @@ startMatch = function()
 
 	local playerList, teams = buildScorePayload()
 	scoreUpdated:FireAllClients(playerList, teams)
-	matchStarted:FireAllClients()
 	modeSelectedEvt:FireAllClients(
 		currentMode.key,
 		currentMode.displayName,
@@ -159,6 +237,8 @@ startMatch = function()
 		currentMode.teamBased,
 		currentMode.scoreLimit
 	)
+	sendRoundContracts()
+	matchStarted:FireAllClients()
 
 	print(string.format("[MatchManager] Match started — %s", currentMode.displayName))
 
@@ -168,16 +248,7 @@ startMatch = function()
 		timerThread = task.delay(currentMode.roundDuration, function()
 			if matchState ~= ACTIVE then return end
 			-- Time expired: find winner by kill count / team score
-			local winner, winnerTeam
-			if currentMode.teamBased then
-				winnerTeam = (teamScores.A >= teamScores.B) and "A" or "B"
-			else
-				local topKills = -1
-				for _, p in ipairs(Players:GetPlayers()) do
-					local k = scores[p.UserId] or 0
-					if k > topKills then topKills = k; winner = p end
-				end
-			end
+			local winner, winnerTeam = resolveTimeWinner()
 			endMatch(winner, winnerTeam, "time")
 		end)
 	end
@@ -192,11 +263,15 @@ endMatch = function(winner, winnerTeam, reason)
 	if currentMode and currentMode.teamBased then
 		winnerName = winnerTeam and ("Team " .. winnerTeam) or "Draw"
 	else
-		winnerName = winner and winner.DisplayName or "Nobody"
+		winnerName = winner and winner.DisplayName or "Draw"
 	end
+	recordWinners(winner, winnerTeam)
 
 	local playerList, teams = buildScorePayload()
+	local summary = StatsTracker.buildSummary(winnerName)
+	EconomyService.grantMatchRewards(summary)
 	matchEnded:FireAllClients(winnerName, playerList, teams)
+	matchSummary:FireAllClients(summary)
 	print(string.format("[MatchManager] Match ended (%s). Winner: %s",
 		reason or "kill limit", winnerName))
 
@@ -279,6 +354,8 @@ end
 
 HealthSystem.KillBind.Event:Connect(function(victim, attacker)
 	if matchState ~= ACTIVE then return end
+
+	StatsTracker.recordKill(attacker, victim)
 
 	if attacker and attacker ~= victim then
 		scores[attacker.UserId] = (scores[attacker.UserId] or 0) + 1

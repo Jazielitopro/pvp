@@ -15,6 +15,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 
 local remotes       = game.ReplicatedStorage:WaitForChild("Remotes")
 local healthUpdated = remotes:WaitForChild("HealthUpdated")
+local healthStateRequested = remotes:WaitForChild("HealthStateRequested")
 local playerDied    = remotes:WaitForChild("PlayerDied")
 
 local HealthConstants = require(game.ReplicatedStorage.Shared.Constants.HealthConstants)
@@ -136,3 +137,5 @@ playerDied.OnClientEvent:Connect(function(victim, attacker)
 			attacker and attacker.DisplayName or "the environment"))
 	end
 end)
+
+healthStateRequested:FireServer()

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#06080E"/><stop offset="1" stop-color="#121726"/></linearGradient><style>.title{font:700 18px Arial;fill:#F5F8FF;letter-spacing:.8px}.label{font:700 12px Arial;fill:#F5F8FF;letter-spacing:.4px}.body{font:500 10px Arial;fill:#9EACC6}.tiny{font:700 9px Arial;fill:#9EACC6;letter-spacing:.5px}.panel{fill:#0B0E18;stroke:#526996;stroke-opacity:.7}.card{fill:#121726;stroke:#526996;stroke-opacity:.68}</style></defs>
+  <rect width="390" height="844" fill="url(#bg)"/>
+  <rect x="16" y="16" width="358" height="68" rx="18" class="panel"/>
+  <text x="30" y="42" class="tiny" fill="#FFD854">WALLET / PROFILE</text><text x="30" y="64" class="label">1,240 COINS  /  LV 04  /  GOLD</text>
+  <text x="16" y="124" class="title">PROGRESSION</text><text x="16" y="144" class="body">Cosmetics only. Rank is status, not power.</text>
+  <g transform="translate(16 164)">
+    <rect width="108" height="38" rx="19" fill="#40E6FF"/><text x="54" y="24" text-anchor="middle" class="label" fill="#06080E">SHOP</text>
+    <rect x="117" width="120" height="38" rx="19" class="card"/><text x="177" y="24" text-anchor="middle" class="label">SEASON</text>
+    <rect x="246" width="128" height="38" rx="19" class="card"/><text x="310" y="24" text-anchor="middle" class="label">PROFILE</text>
+  </g>
+  <rect x="16" y="224" width="358" height="92" rx="16" fill="#121726" stroke="#FFD854"/>
+  <text x="32" y="250" class="tiny" fill="#FFD854">DAILY REWARD / STREAK 04</text><text x="32" y="274" class="label">+70 COINS  /  +125 XP</text>
+  <rect x="236" y="260" width="122" height="40" rx="12" fill="#FFD854"/><text x="297" y="285" text-anchor="middle" class="label" fill="#06080E">CLAIM</text>
+  <text x="16" y="354" class="label" fill="#40E6FF">DAILY SHOP</text><text x="320" y="354" class="tiny">SCROLL</text>
+  <g transform="translate(16 370)">
+    <rect width="358" height="82" rx="14" class="card" stroke="#40E6FF"/><circle cx="44" cy="41" r="20" fill="#40E6FF"/><text x="80" y="34" class="label">NEON BOLT</text><text x="80" y="55" class="tiny">RARE / PROJECTILE</text><text x="292" y="48" class="label" fill="#FFD854">300</text>
+    <rect y="94" width="358" height="82" rx="14" class="card"/><circle cx="44" cy="135" r="20" fill="#FF7840"/><text x="80" y="128" class="label">EMBER HOOK</text><text x="80" y="149" class="tiny">RARE / HOOK TRAIL</text><text x="292" y="142" class="label" fill="#FFD854">420</text>
+  </g>
+  <rect x="16" y="574" width="358" height="238" rx="18" class="panel"/>
+  <text x="32" y="606" class="tiny" fill="#40E6FF">SELECTED PREVIEW</text>
+  <circle cx="88" cy="676" r="46" fill="#1D243A" stroke="#40E6FF"/><circle cx="88" cy="676" r="20" fill="#40E6FF"/>
+  <text x="154" y="654" class="label">NEON BOLT</text><text x="154" y="676" class="tiny" fill="#40E6FF">RARE / PROJECTILE</text><text x="154" y="702" class="body">Fast cyan trail.</text>
+  <rect x="32" y="742" width="326" height="50" rx="14" fill="#40E6FF"/><text x="195" y="773" text-anchor="middle" class="label" fill="#06080E">BUY FOR 300 COINS</text>
+  <text x="16" y="832" class="tiny">MOBILE STACK / SCROLLING FRAME / ES: COMPRAR POR 300 MONEDAS</text>
+</svg>

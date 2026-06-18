@@ -8,5 +8,8 @@ return {
 	COOLDOWN         = 1.8,  -- seconds after detach before next grapple
 	MIN_DETACH_DIST  = 4,    -- studs — auto-detach when this close to hook
 	MAX_DURATION     = 6,    -- seconds — force-cancel if grapple lasts too long
+	SLINGSHOT_MIN_SPEED = 75,
+	SLINGSHOT_MULT   = 1.14,
+	SLINGSHOT_MAX_SPEED = 155,
 	KEY              = Enum.KeyCode.F,
 }

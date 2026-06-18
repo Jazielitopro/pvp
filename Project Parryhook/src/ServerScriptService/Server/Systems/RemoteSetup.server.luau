@@ -1,91 +1,75 @@
--- RemoteSetup (Script — server only)
+-- RemoteSetup (Script - server only)
 -- Creates all RemoteEvents in ReplicatedStorage at game start.
--- Must run before any client script tries to access these.
+-- Idempotent so Studio reloads or accidental pre-created remotes stay safe.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local remotes = Instance.new("Folder")
-remotes.Name   = "Remotes"
-remotes.Parent = ReplicatedStorage
+local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+if not remotes then
+	remotes = Instance.new("Folder")
+	remotes.Name = "Remotes"
+	remotes.Parent = ReplicatedStorage
+end
+
+local function getOrCreateRemote(name)
+	local remote = remotes:FindFirstChild(name)
+	if remote and remote:IsA("RemoteEvent") then
+		return remote
+	end
+	if remote then
+		warn(string.format("[RemoteSetup] %s exists but is not a RemoteEvent", name))
+		return remote
+	end
+
+	remote = Instance.new("RemoteEvent")
+	remote.Name = name
+	remote.Parent = remotes
+	return remote
+end
 
 -- Movement
-local dashRequest = Instance.new("RemoteEvent")
-dashRequest.Name   = "DashRequest"
-dashRequest.Parent = remotes
+getOrCreateRemote("DashRequest")
+getOrCreateRemote("GrappleRequest") -- client -> server: requestId, ray origin/direction, client attach point
+getOrCreateRemote("GrappleResult") -- server -> client: accepted, canonical attach point, rejection reason
+getOrCreateRemote("GrappleEnded") -- client -> server: grapple detach notification
 
--- Weapon — Phase 2
-local fireRequest = Instance.new("RemoteEvent")
-fireRequest.Name   = "FireRequest"
-fireRequest.Parent = remotes
+-- Weapon
+getOrCreateRemote("FireRequest")
+getOrCreateRemote("ReloadRequest")
+getOrCreateRemote("AmmoUpdated")
+getOrCreateRemote("AmmoStateRequested")
 
-local reloadRequest = Instance.new("RemoteEvent")
-reloadRequest.Name   = "ReloadRequest"
-reloadRequest.Parent = remotes
+-- Health
+getOrCreateRemote("HealthUpdated")
+getOrCreateRemote("HealthStateRequested")
+getOrCreateRemote("PlayerDied")
+getOrCreateRemote("HitConfirmed")
 
-local ammoUpdated = Instance.new("RemoteEvent")
-ammoUpdated.Name   = "AmmoUpdated"
-ammoUpdated.Parent = remotes
+-- Match
+getOrCreateRemote("ScoreUpdated")
+getOrCreateRemote("MatchStarted")
+getOrCreateRemote("MatchEnded")
+getOrCreateRemote("MatchSummary")
+getOrCreateRemote("MedalAwarded")
+getOrCreateRemote("RoundContract")
+getOrCreateRemote("RoundContractUpdated")
+getOrCreateRemote("IntermissionTick")
+getOrCreateRemote("ModeSelected")
+getOrCreateRemote("TeamAssigned")
 
--- Health — Phase 2
-local healthUpdated = Instance.new("RemoteEvent")
-healthUpdated.Name   = "HealthUpdated"
-healthUpdated.Parent = remotes
+-- Economy / cosmetics
+getOrCreateRemote("EconomyProfileUpdated")
+getOrCreateRemote("EconomyProfileRequested")
+getOrCreateRemote("CosmeticPurchaseRequested")
+getOrCreateRemote("CosmeticEquipRequested")
+getOrCreateRemote("DailyLoginRewardClaimed")
+getOrCreateRemote("SeasonRewardClaimed")
 
-local playerDied = Instance.new("RemoteEvent")
-playerDied.Name   = "PlayerDied"
-playerDied.Parent = remotes
+-- Parry
+getOrCreateRemote("ParryRequest")
+getOrCreateRemote("ParryEffect")
 
--- Combat feedback — Phase 2 (Steps 6-7)
-local hitConfirmed = Instance.new("RemoteEvent")
-hitConfirmed.Name   = "HitConfirmed"   -- fired to attacker: (wasKill, victimName)
-hitConfirmed.Parent = remotes
-
--- Grapple — Phase 4
-local grappleRequest = Instance.new("RemoteEvent")
-grappleRequest.Name   = "GrappleRequest"  -- client → server: (attachPoint: Vector3)
-grappleRequest.Parent = remotes
-
--- Match — Phase 6
-local scoreUpdated = Instance.new("RemoteEvent")
-scoreUpdated.Name   = "ScoreUpdated"   -- server → all: array of {userId,name,kills}
-scoreUpdated.Parent = remotes
-
-local matchStarted = Instance.new("RemoteEvent")
-matchStarted.Name   = "MatchStarted"   -- server → all: ()
-matchStarted.Parent = remotes
-
-local matchEnded = Instance.new("RemoteEvent")
-matchEnded.Name   = "MatchEnded"       -- server → all: (winnerName: string, scores: array)
-matchEnded.Parent = remotes
-
--- Parry — Phase 5
-local parryRequest = Instance.new("RemoteEvent")
-parryRequest.Name   = "ParryRequest"  -- client → server: (clientTimestamp: number)
-parryRequest.Parent = remotes
-
-local parryEffect = Instance.new("RemoteEvent")
-parryEffect.Name   = "ParryEffect"    -- server → all: (parrierUserId: number, position: Vector3)
-parryEffect.Parent = remotes
-
--- Projectile — Phase 3
-local spawnProjectile = Instance.new("RemoteEvent")
-spawnProjectile.Name   = "SpawnProjectile"  -- server → all: (id, ownerId, origin, dir, speed)
-spawnProjectile.Parent = remotes
-
-local impactEffect = Instance.new("RemoteEvent")
-impactEffect.Name   = "ImpactEffect"        -- server → all: (position, normal, isKill)
-impactEffect.Parent = remotes
-
--- Intermission countdown / waiting status
-local intermissionTick = Instance.new("RemoteEvent")
-intermissionTick.Name   = "IntermissionTick"  -- server → all: table {type, secondsLeft, modeName, ...}
-intermissionTick.Parent = remotes
-
--- Game mode events (multi-mode system)
-local modeSelected = Instance.new("RemoteEvent")
-modeSelected.Name   = "ModeSelected"   -- server → all: (key, displayName, description, teamBased, scoreLimit)
-modeSelected.Parent = remotes
-
-local teamAssigned = Instance.new("RemoteEvent")
-teamAssigned.Name   = "TeamAssigned"   -- server → client: (team: "A"|"B")
-teamAssigned.Parent = remotes
+-- Projectile feedback
+getOrCreateRemote("SpawnProjectile")
+getOrCreateRemote("ProjectileUpdated")
+getOrCreateRemote("ImpactEffect")

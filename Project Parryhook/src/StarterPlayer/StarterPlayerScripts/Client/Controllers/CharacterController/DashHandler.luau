@@ -4,6 +4,7 @@
 -- No iframes — player can be hit freely during a dash.
 
 local Constants = require(game.ReplicatedStorage.Shared.Constants.MovementConstants)
+local ClientActionGate = require(game.ReplicatedStorage.Client.ClientActionGate)
 
 local DashHandler = {}
 DashHandler.__index = DashHandler
@@ -35,6 +36,12 @@ function DashHandler:tryDash(moveDirection, cameraForward)
 	if not self:canDash() then
 		print(string.format("[Dash] Rejected — isDashing=%s onCooldown=%s",
 			tostring(self._isDashing), tostring(self._onCooldown)))
+		return
+	end
+
+	local canDash = ClientActionGate.try("movement.dash", Constants.DASH_DURATION + Constants.DASH_COOLDOWN)
+	if not canDash then
+		print("[Dash] Duplicate dash input ignored")
 		return
 	end
 

@@ -7,6 +7,7 @@ local Constants     = require(game.ReplicatedStorage.Shared.Constants.HealthCons
 
 local remotes       = game.ReplicatedStorage:WaitForChild("Remotes")
 local healthUpdated = remotes:WaitForChild("HealthUpdated")
+local healthStateRequested = remotes:WaitForChild("HealthStateRequested")
 local playerDied    = remotes:WaitForChild("PlayerDied")
 local hitConfirmed  = remotes:WaitForChild("HitConfirmed")
 
@@ -70,7 +71,7 @@ local HealthSystem = {}
 HealthSystem.KillBind = Instance.new("BindableEvent")
 
 -- Returns true if the hit was lethal.
-function HealthSystem.takeDamage(victim, attacker, amount)
+function HealthSystem.takeDamage(victim, attacker, amount, hitTag)
 	local s = getState(victim)
 
 	if s.isDead then
@@ -105,7 +106,7 @@ function HealthSystem.takeDamage(victim, attacker, amount)
 	end
 
 	if attacker then
-		hitConfirmed:FireClient(attacker, isKill, victim.DisplayName)
+		hitConfirmed:FireClient(attacker, isKill, victim.DisplayName, hitTag)
 	end
 
 	return isKill
@@ -115,9 +116,18 @@ function HealthSystem.getHP(player)
 	return getState(player).hp
 end
 
+function HealthSystem.isAlive(player)
+	local s = getState(player)
+	return not s.isDead and s.hp > 0
+end
+
 -- ── Lifecycle (called once by HealthBootstrap) ────────────────────────────────
 
 function HealthSystem.init()
+	healthStateRequested.OnServerEvent:Connect(function(player)
+		syncHealth(player)
+	end)
+
 	Players.PlayerAdded:Connect(function(player)
 		getState(player)
 		print(string.format("[Health] State initialised for %s", player.Name))
@@ -129,7 +139,6 @@ function HealthSystem.init()
 			s.isDead = false
 			print(string.format("[Health] Character added — %s reset to %.0f HP", player.Name, s.hp))
 
-			task.wait(2)
 			syncHealth(player)
 			print(string.format("[Health] Synced HP for %s (%.0f / %.0f)",
 				player.Name, s.hp, Constants.MAX_HEALTH))

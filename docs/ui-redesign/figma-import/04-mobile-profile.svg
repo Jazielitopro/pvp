@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#06080E"/><stop offset="1" stop-color="#121726"/></linearGradient><style>.title{font:700 18px Arial;fill:#F5F8FF;letter-spacing:.7px}.label{font:700 12px Arial;fill:#F5F8FF;letter-spacing:.4px}.body{font:500 10px Arial;fill:#9EACC6}.tiny{font:700 9px Arial;fill:#9EACC6;letter-spacing:.5px}.panel{fill:#0B0E18;stroke:#526996;stroke-opacity:.72}.card{fill:#121726;stroke:#526996;stroke-opacity:.7}</style></defs>
+  <rect width="390" height="844" fill="url(#bg)"/>
+  <text x="16" y="42" class="title">RANKED PROFILE</text><text x="16" y="64" class="body">Status and history. No gameplay power.</text>
+  <circle cx="94" cy="166" r="62" fill="#1D243A" stroke="#FFD854" stroke-width="2"/><text x="94" y="158" text-anchor="middle" class="tiny" fill="#FFD854">RANK</text><text x="94" y="186" text-anchor="middle" class="label">GOLD</text>
+  <text x="188" y="138" class="tiny">RATING</text><text x="188" y="172" class="title">1,180</text><text x="188" y="198" class="body">Peak 1,245 / 18 wins</text>
+  <g transform="translate(16 270)">
+    <rect width="358" height="64" rx="14" class="card"/><text x="18" y="26" class="tiny">MATCH RECORD</text><text x="18" y="49" class="label">34 MATCHES / 18 WINS / 52%</text>
+    <rect y="78" width="358" height="64" rx="14" class="card"/><text x="18" y="104" class="tiny">COMBAT</text><text x="18" y="127" class="label">142 KILLS / 86 DEATHS</text>
+    <rect y="156" width="358" height="64" rx="14" class="card"/><text x="18" y="182" class="tiny">PARRY</text><text x="18" y="205" class="label">28 PERFECT / 06 CLASH WINS</text>
+    <rect y="234" width="358" height="64" rx="14" class="card"/><text x="18" y="260" class="tiny">MOBILITY</text><text x="18" y="283" class="label">17 HOOKS / 44 AIR SHOTS</text>
+    <rect y="320" width="358" height="126" rx="14" fill="#121726" stroke="#40E6FF"/><text x="18" y="348" class="tiny" fill="#40E6FF">EQUIPPED</text><text x="18" y="376" class="label">NEON BOLT</text><text x="18" y="398" class="label">COMET HOOK / ROSE PARRY</text><text x="18" y="424" class="tiny">TITLE: PERFECT TIMING</text>
+  </g>
+  <text x="16" y="824" class="tiny">STACKED SCROLL / ES: PERFIL CLASIFICATORIO</text>
+</svg>

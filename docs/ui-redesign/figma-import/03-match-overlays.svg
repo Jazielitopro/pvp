@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1100" viewBox="0 0 1440 1100">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#06080E"/><stop offset="1" stop-color="#121726"/></linearGradient><linearGradient id="panel" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#1D243A"/><stop offset="1" stop-color="#0B0E18"/></linearGradient><style>.title{font:700 24px Arial;fill:#F5F8FF;letter-spacing:1px}.h2{font:700 17px Arial;fill:#F5F8FF;letter-spacing:.8px}.label{font:700 13px Arial;fill:#F5F8FF;letter-spacing:.5px}.body{font:500 12px Arial;fill:#9EACC6}.tiny{font:700 10px Arial;fill:#9EACC6;letter-spacing:.6px}.panel{fill:url(#panel);stroke:#526996;stroke-opacity:.72;stroke-width:1.5}.card{fill:#121726;stroke:#526996;stroke-opacity:.7}</style></defs>
+  <rect width="1440" height="1100" fill="url(#bg)"/>
+  <text x="60" y="62" class="title">MATCH OVERLAYS / DESKTOP STARTER BOARD</text>
+  <text x="60" y="88" class="body">Waiting, intermission, team assignment, contract, medal, tutorial, scoreboard, summary.</text>
+
+  <g transform="translate(60 130)">
+    <rect width="398" height="188" rx="20" class="panel"/><rect width="6" height="188" rx="3" fill="#40E6FF"/>
+    <text x="28" y="44" class="tiny" fill="#40E6FF">WAITING FOR PLAYERS</text><text x="28" y="82" class="title">NEED 2 PLAYERS</text><text x="28" y="112" class="body">Invite a friend or explore your progression hub.</text><text x="28" y="158" class="label">PLAYERS  1 / 2</text>
+  </g>
+  <g transform="translate(492 130)">
+    <rect width="398" height="188" rx="20" class="panel"/><rect width="6" height="188" rx="3" fill="#9A65FF"/>
+    <text x="28" y="44" class="tiny" fill="#9A65FF">NEXT MODE</text><text x="28" y="82" class="title">TEAM DEATHMATCH</text><text x="28" y="112" class="body">First team to 25 eliminations.</text><text x="28" y="158" class="label" fill="#FFD854">MATCH STARTS IN  08</text>
+  </g>
+  <g transform="translate(924 130)">
+    <rect width="456" height="188" rx="20" fill="#092536" stroke="#40E6FF"/><text x="228" y="74" text-anchor="middle" class="tiny" fill="#40E6FF">TEAM ASSIGNED</text><text x="228" y="118" text-anchor="middle" class="title">YOU ARE TEAM A</text><text x="228" y="148" text-anchor="middle" class="body">Protect your momentum. Play for the trade.</text>
+  </g>
+
+  <g transform="translate(60 352)">
+    <rect width="398" height="154" rx="20" class="panel"/><rect width="6" height="154" rx="3" fill="#FFD854"/>
+    <text x="28" y="38" class="tiny" fill="#FFD854">CONTRACT UPDATED</text><text x="28" y="70" class="h2">DAILY FINISHER</text><text x="28" y="96" class="body">Score 8 eliminations</text><rect x="28" y="116" width="250" height="10" rx="5" fill="#06080E"/><rect x="28" y="116" width="182" height="10" rx="5" fill="#FFD854"/><text x="298" y="126" class="tiny">6 / 8</text>
+  </g>
+  <g transform="translate(492 352)">
+    <rect width="398" height="154" rx="20" class="panel"/><rect width="6" height="154" rx="3" fill="#FF56AE"/>
+    <text x="28" y="38" class="tiny" fill="#FF56AE">MEDAL EARNED</text><text x="28" y="78" class="title">PERFECT PARRY</text><text x="28" y="108" class="body">Frame-perfect reflect. Keep the rhythm.</text>
+  </g>
+  <g transform="translate(924 352)">
+    <rect width="456" height="154" rx="20" class="panel"/><rect width="6" height="154" rx="3" fill="#40E6FF"/>
+    <text x="28" y="38" class="tiny" fill="#40E6FF">TIP 03 / 06</text><text x="28" y="70" class="h2">SHOOT AND RELOAD</text><text x="28" y="96" class="body">Left click fires. Press R to reload before you are empty.</text><text x="28" y="130" class="tiny">H  HIDE TIPS  /  MOBILE: RLD BUTTON</text>
+  </g>
+
+  <g transform="translate(60 548)">
+    <rect width="812" height="476" rx="24" class="panel"/>
+    <text x="32" y="48" class="title">SCOREBOARD</text><text x="744" y="48" text-anchor="end" class="label" fill="#40E6FF">A 12 - 09 B</text>
+    <line x1="32" y1="70" x2="780" y2="70" stroke="#526996"/>
+    <g transform="translate(32 94)">
+      <rect width="748" height="52" rx="12" fill="#1D243A" stroke="#40E6FF"/><text x="18" y="32" class="label" fill="#40E6FF">01</text><text x="72" y="32" class="label">YOU / SKYBREAKER</text><text x="620" y="32" class="tiny">TEAM A</text><text x="714" y="32" text-anchor="end" class="label">12 K</text>
+      <rect y="64" width="748" height="52" rx="12" class="card"/><text x="18" y="96" class="label">02</text><text x="72" y="96" class="label">HOOKSMITH</text><text x="620" y="96" class="tiny">TEAM A</text><text x="714" y="96" text-anchor="end" class="label">09 K</text>
+      <rect y="128" width="748" height="52" rx="12" class="card"/><text x="18" y="160" class="label">03</text><text x="72" y="160" class="label">RUBYHOOK</text><text x="620" y="160" class="tiny">TEAM B</text><text x="714" y="160" text-anchor="end" class="label">08 K</text>
+      <rect y="192" width="748" height="52" rx="12" class="card"/><text x="18" y="224" class="label">04</text><text x="72" y="224" class="label">VIOLET</text><text x="620" y="224" class="tiny">TEAM B</text><text x="714" y="224" text-anchor="end" class="label">06 K</text>
+    </g>
+    <text x="32" y="436" class="tiny">TAB HOLD / MOBILE SHEET</text>
+  </g>
+
+  <g transform="translate(910 548)">
+    <rect width="470" height="476" rx="24" class="panel"/>
+    <text x="30" y="48" class="tiny" fill="#FFD854">MATCH COMPLETE</text><text x="30" y="88" class="title">TEAM A WINS</text><text x="30" y="118" class="body">Momentum secured. Rewards added to your profile.</text>
+    <rect x="30" y="152" width="410" height="78" rx="14" class="card"/><text x="50" y="182" class="tiny">MATCH REWARD</text><text x="50" y="210" class="label" fill="#FFD854">+220 XP  /  +35 COINS</text>
+    <rect x="30" y="246" width="410" height="78" rx="14" class="card"/><text x="50" y="276" class="tiny">CONTRACT</text><text x="50" y="304" class="label" fill="#70FF97">DAILY FINISHER COMPLETE</text>
+    <rect x="30" y="354" width="410" height="64" rx="16" fill="#40E6FF"/><text x="235" y="393" text-anchor="middle" class="label" fill="#06080E">CONTINUE</text>
+  </g>
+</svg>

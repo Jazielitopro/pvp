@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1160" viewBox="0 0 1440 1160">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#06080E"/>
+      <stop offset="1" stop-color="#121726"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#1D243A"/>
+      <stop offset="1" stop-color="#0B0E18"/>
+    </linearGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000000" flood-opacity=".38"/></filter>
+    <style>
+      .h1{font:700 34px Arial;fill:#F5F8FF;letter-spacing:2px}
+      .h2{font:700 20px Arial;fill:#F5F8FF;letter-spacing:1px}
+      .label{font:700 14px Arial;fill:#F5F8FF;letter-spacing:.8px}
+      .body{font:500 13px Arial;fill:#9EACC6}
+      .tiny{font:700 11px Arial;fill:#9EACC6;letter-spacing:.7px}
+      .panel{fill:url(#panel);stroke:#526996;stroke-opacity:.7;stroke-width:1.5}
+    </style>
+  </defs>
+  <rect width="1440" height="1160" fill="url(#bg)"/>
+  <text x="64" y="72" class="h1">PARRYHOOK UI REDESIGN</text>
+  <text x="64" y="100" class="body">01 Foundations / 02 Components - Figma import starter board</text>
+
+  <text x="64" y="164" class="h2">COLOR TOKENS</text>
+  <g transform="translate(64 190)">
+    <g><rect width="112" height="88" rx="14" fill="#06080E" stroke="#526996"/><text x="12" y="112" class="tiny">INK #06080E</text></g>
+    <g transform="translate(142)"><rect width="112" height="88" rx="14" fill="#0B0E18" stroke="#526996"/><text x="12" y="112" class="tiny">PANEL</text></g>
+    <g transform="translate(284)"><rect width="112" height="88" rx="14" fill="#121726" stroke="#526996"/><text x="12" y="112" class="tiny">SOFT</text></g>
+    <g transform="translate(426)"><rect width="112" height="88" rx="14" fill="#1D243A" stroke="#526996"/><text x="12" y="112" class="tiny">LIFT</text></g>
+    <g transform="translate(568)"><rect width="112" height="88" rx="14" fill="#40E6FF"/><text x="12" y="112" class="tiny">CYAN</text></g>
+    <g transform="translate(710)"><rect width="112" height="88" rx="14" fill="#FFD854"/><text x="12" y="112" class="tiny">GOLD</text></g>
+    <g transform="translate(852)"><rect width="112" height="88" rx="14" fill="#FF56AE"/><text x="12" y="112" class="tiny">PINK</text></g>
+    <g transform="translate(994)"><rect width="112" height="88" rx="14" fill="#9A65FF"/><text x="12" y="112" class="tiny">VIOLET</text></g>
+    <g transform="translate(1136)"><rect width="112" height="88" rx="14" fill="#70FF97"/><text x="12" y="112" class="tiny">GREEN</text></g>
+  </g>
+
+  <text x="64" y="356" class="h2">CORE COMPONENTS</text>
+  <g transform="translate(64 382)">
+    <rect class="panel" width="388" height="220" rx="20" filter="url(#shadow)"/>
+    <text x="24" y="38" class="h2">PANEL / GLASS</text>
+    <text x="24" y="66" class="body">Dark surface, restrained neon border, readable hierarchy.</text>
+    <rect x="24" y="94" width="156" height="48" rx="12" fill="#40E6FF"/>
+    <text x="58" y="124" class="label" fill="#06080E">PRIMARY ACTION</text>
+    <rect x="196" y="94" width="156" height="48" rx="12" fill="#1D243A" stroke="#526996"/>
+    <text x="224" y="124" class="label">SECONDARY</text>
+    <rect x="24" y="158" width="156" height="40" rx="12" fill="#FFD854"/>
+    <text x="60" y="183" class="label" fill="#06080E">CLAIM +100</text>
+    <rect x="196" y="158" width="156" height="40" rx="12" fill="#121726" stroke="#526996" stroke-opacity=".45"/>
+    <text x="244" y="183" class="label" opacity=".46">DISABLED</text>
+  </g>
+
+  <g transform="translate(486 382)">
+    <rect class="panel" width="388" height="220" rx="20"/>
+    <text x="24" y="38" class="h2">ABILITY CHIPS</text>
+    <g transform="translate(24 70)">
+      <rect width="78" height="74" rx="15" fill="#121726" stroke="#40E6FF"/>
+      <text x="39" y="32" text-anchor="middle" class="label">DASH</text><text x="39" y="56" text-anchor="middle" class="tiny" fill="#70FF97">READY</text>
+      <rect x="92" width="78" height="74" rx="15" fill="#121726" stroke="#9A65FF"/>
+      <text x="131" y="32" text-anchor="middle" class="label">HOOK</text><text x="131" y="56" text-anchor="middle" class="tiny">1.8s</text>
+      <rect x="184" width="78" height="74" rx="15" fill="#121726" stroke="#FF56AE"/>
+      <text x="223" y="32" text-anchor="middle" class="label">PARRY</text><text x="223" y="56" text-anchor="middle" class="tiny" fill="#70FF97">READY</text>
+      <rect x="276" width="78" height="74" rx="15" fill="#121726" stroke="#526996" opacity=".48"/>
+      <text x="315" y="32" text-anchor="middle" class="label">SLIDE</text><text x="315" y="56" text-anchor="middle" class="tiny">LOCKED</text>
+    </g>
+    <text x="24" y="182" class="body">Ready, cooldown, active, disabled. Keep below crosshair.</text>
+  </g>
+
+  <g transform="translate(908 382)">
+    <rect class="panel" width="468" height="220" rx="20"/>
+    <text x="24" y="38" class="h2">SHOP ITEM / REWARD</text>
+    <rect x="24" y="64" width="196" height="132" rx="14" fill="#121726" stroke="#40E6FF"/>
+    <rect x="38" y="78" width="56" height="56" rx="14" fill="#1D243A"/>
+    <circle cx="66" cy="106" r="16" fill="#40E6FF"/>
+    <text x="108" y="94" class="label">NEON BOLT</text>
+    <text x="108" y="116" class="tiny" fill="#40E6FF">RARE / PROJECTILE</text>
+    <text x="38" y="168" class="label" fill="#FFD854">300 COINS</text>
+    <text x="146" y="168" class="tiny">SELECT</text>
+    <rect x="242" y="64" width="202" height="132" rx="14" fill="#121726" stroke="#FFD854"/>
+    <text x="260" y="94" class="label">DAILY REWARD</text>
+    <text x="260" y="121" class="body">Streak 4 / +70 coins / +125 XP</text>
+    <rect x="260" y="142" width="164" height="38" rx="10" fill="#FFD854"/>
+    <text x="342" y="166" text-anchor="middle" class="label" fill="#06080E">CLAIM REWARD</text>
+  </g>
+
+  <g transform="translate(64 640)">
+    <rect class="panel" width="812" height="208" rx="20"/>
+    <text x="24" y="38" class="h2">NAVIGATION / PROGRESS / NOTIFICATION</text>
+    <g transform="translate(24 62)">
+      <rect width="106" height="38" rx="19" fill="#40E6FF"/><text x="53" y="24" text-anchor="middle" class="label" fill="#06080E">SHOP</text>
+      <rect x="116" width="106" height="38" rx="19" fill="#121726" stroke="#526996"/><text x="169" y="24" text-anchor="middle" class="label">SEASON</text>
+      <rect x="232" width="106" height="38" rx="19" fill="#121726" stroke="#526996"/><text x="285" y="24" text-anchor="middle" class="label">PROFILE</text>
+    </g>
+    <text x="24" y="132" class="tiny">CONTRACT PROGRESS</text>
+    <rect x="24" y="148" width="344" height="14" rx="7" fill="#06080E"/>
+    <rect x="24" y="148" width="236" height="14" rx="7" fill="#FFD854"/>
+    <text x="382" y="160" class="label">6 / 8</text>
+    <rect x="458" y="62" width="326" height="100" rx="14" fill="#121726" stroke="#FFD854"/>
+    <rect x="458" y="62" width="6" height="100" rx="3" fill="#FFD854"/>
+    <text x="482" y="92" class="tiny" fill="#FFD854">CONTRACT UPDATED</text>
+    <text x="482" y="119" class="label">Daily Finisher</text>
+    <text x="482" y="144" class="body">Score 8 eliminations  /  6 of 8</text>
+  </g>
+
+  <g transform="translate(908 640)">
+    <rect class="panel" width="468" height="436" rx="20"/>
+    <text x="24" y="38" class="h2">TOUCH / ACTION</text>
+    <text x="24" y="64" class="body">Minimum 44px target. Primary combat actions use 56-68px.</text>
+    <g transform="translate(52 104)">
+      <circle cx="68" cy="68" r="68" fill="#121726" stroke="#40E6FF" stroke-width="2"/><text x="68" y="74" text-anchor="middle" class="label">FIRE</text>
+      <circle cx="222" cy="68" r="54" fill="#121726" stroke="#FF56AE" stroke-width="2"/><text x="222" y="74" text-anchor="middle" class="label">PARRY</text>
+      <circle cx="342" cy="68" r="48" fill="#121726" stroke="#9A65FF" stroke-width="2"/><text x="342" y="74" text-anchor="middle" class="label">HOOK</text>
+      <circle cx="76" cy="202" r="44" fill="#121726" stroke="#526996"/><text x="76" y="208" text-anchor="middle" class="tiny">RLD</text>
+      <circle cx="188" cy="202" r="44" fill="#121726" stroke="#40E6FF"/><text x="188" y="208" text-anchor="middle" class="tiny">DASH</text>
+      <circle cx="300" cy="202" r="44" fill="#121726" stroke="#40E6FF"/><text x="300" y="208" text-anchor="middle" class="tiny">JUMP</text>
+    </g>
+    <text x="24" y="398" class="tiny">ES STRESS: RECARGAR / DESLIZAR / GANCHO</text>
+  </g>
+
+  <g transform="translate(64 888)">
+    <rect class="panel" width="812" height="188" rx="20"/>
+    <text x="24" y="38" class="h2">SCOREBOARD ROW</text>
+    <rect x="24" y="64" width="764" height="48" rx="12" fill="#1D243A" stroke="#40E6FF"/>
+    <text x="42" y="94" class="label" fill="#40E6FF">01</text>
+    <text x="92" y="94" class="label">YOU / SKYBREAKER</text>
+    <text x="598" y="94" class="tiny">TEAM A</text>
+    <text x="744" y="94" text-anchor="end" class="label">12 K</text>
+    <rect x="24" y="126" width="764" height="38" rx="10" fill="#121726"/>
+    <text x="42" y="150" class="tiny">02</text><text x="92" y="150" class="body">HOOKSMITH</text><text x="744" y="150" text-anchor="end" class="tiny">09 K</text>
+  </g>
+</svg>

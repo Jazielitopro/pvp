@@ -11,6 +11,7 @@ local ProjectileRegistry = require(script.Parent.ProjectileRegistry)
 local DamageApplicator   = require(script.Parent.DamageApplicator)
 local FeedbackDispatcher = require(script.Parent.FeedbackDispatcher)
 local ParryHandler       = require(script.Parent.ParryHandler)
+local HealthSystem       = require(script.Parent.HealthSystem)
 
 local CollisionHandler = {}
 
@@ -38,16 +39,24 @@ function CollisionHandler.onHit(projectile, hitResult)
 	local victim = getPlayerFromInstance(hitResult.Instance)
 
 	if victim and victim ~= attacker then
+		if not HealthSystem.isAlive(victim) then
+			print(string.format("[Collision] Projectile id=%d hit dead player %s — ignored",
+				projectile.id, victim.Name))
+			ProjectileRegistry.remove(projectile.id)
+			return
+		end
+
 		-- ── Parry check ──────────────────────────────────────────────────────
 		if ParryHandler.isParrying(victim) then
+			local parryKind = ParryHandler.getParryKind(victim, projectile)
 			-- Reflect: update projectile in registry (do NOT remove it).
 			-- It keeps flying in the reversed direction with the parrier as new owner.
 			print(string.format("[Collision] Projectile id=%d PARRIED by %s — reflected back at %s",
 				projectile.id, victim.Name, attacker and attacker.Name or "ENV"))
-			ParryHandler.reflect(projectile, victim)
 			-- projectile.position stays at hitPos so it starts from the collision point
 			projectile.position = hitPos
-			FeedbackDispatcher.fireParry(victim.UserId, hitPos)
+			ParryHandler.reflect(projectile, victim, parryKind)
+			FeedbackDispatcher.fireParry(victim.UserId, hitPos, parryKind)
 			return   -- no damage, no impact flash
 		end
 
@@ -55,7 +64,8 @@ function CollisionHandler.onHit(projectile, hitResult)
 		print(string.format("[Collision] Projectile id=%d HIT %s (fired by %s)",
 			projectile.id, victim.Name, attacker and attacker.Name or "ENV"))
 		ProjectileRegistry.remove(projectile.id)
-		local isKill = DamageApplicator.applyDamage(victim, attacker)
+		local hitTag = projectile.airborneShot and "AIR SHOT" or nil
+		local isKill = DamageApplicator.applyDamage(victim, attacker, projectile.damage, hitTag)
 		FeedbackDispatcher.fireImpact(hitPos, hitNormal, isKill)
 	else
 		-- Hit environment (or self — guard)

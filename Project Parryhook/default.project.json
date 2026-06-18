@@ -70,6 +70,14 @@
               "$path": "src/StarterPlayer/StarterPlayerScripts/Client/Controllers/HUDController/HUDController.client.luau"
             },
 
+            "EconomyController": {
+              "$path": "src/StarterPlayer/StarterPlayerScripts/Client/Controllers/EconomyController/EconomyController.client.luau"
+            },
+
+            "TutorialController": {
+              "$path": "src/StarterPlayer/StarterPlayerScripts/Client/Controllers/TutorialController/TutorialController.client.luau"
+            },
+
             "WeaponController": {
               "$path": "src/StarterPlayer/StarterPlayerScripts/Client/Controllers/WeaponController/WeaponController.client.luau"
             },

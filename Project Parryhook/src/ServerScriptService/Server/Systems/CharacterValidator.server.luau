@@ -10,10 +10,14 @@
 
 local Players         = game:GetService("Players")
 local RunService      = game:GetService("RunService")
+local Workspace       = game:GetService("Workspace")
 local Constants       = require(game.ReplicatedStorage.Shared.Constants.MovementConstants)
 local GrappleConstants = require(game.ReplicatedStorage.Shared.Constants.GrappleConstants)
+local StatsTracker    = require(script.Parent.StatsTracker)
 
 local MAX_ALLOWED_SPEED = Constants.SPRINT_SPEED * Constants.MAX_SPEED_TOLERANCE
+local MAX_GRAPPLE_CAMERA_OFFSET = 24
+local GRAPPLE_POST_WINDOW = 2.0
 
 -- [Player] = { position: Vector3, timestamp: number }
 local lastValid = {}
@@ -27,10 +31,135 @@ local grappleWindows = {}
 -- [Player] = os.clock() of last server-validated dash (server-side cooldown)
 local dashCooldowns = {}
 
+-- [Player] = os.clock() of last server-validated grapple (server-side cooldown)
+local grappleCooldowns = {}
+
+-- [Player] = true while the server has accepted a grapple start without an end.
+local activeGrapples = {}
+
 -- DashRequest / GrappleRequest handlers
 local remotes      = game.ReplicatedStorage:WaitForChild("Remotes")
 local dashRequest  = remotes:WaitForChild("DashRequest")
 local grappleRequest = remotes:WaitForChild("GrappleRequest")
+local grappleResult = remotes:WaitForChild("GrappleResult")
+local grappleEnded = remotes:WaitForChild("GrappleEnded")
+
+local function isPlayerCharacter(instance)
+	local ancestor = instance
+	while ancestor do
+		if ancestor:IsA("Model") and Players:GetPlayerFromCharacter(ancestor) then
+			return true
+		end
+		ancestor = ancestor.Parent
+	end
+	return false
+end
+
+local function validateGrappleAttachPoint(player, attachPoint)
+	if typeof(attachPoint) ~= "Vector3" then
+		return false, "non-Vector3 attach point"
+	end
+
+	local character = player.Character
+	local head = character and character:FindFirstChild("Head")
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not character or not head or not root then
+		return false, "missing character parts"
+	end
+
+	local offset = attachPoint - head.Position
+	local distance = offset.Magnitude
+	if distance <= 0 or distance > GrappleConstants.MAX_RANGE + 4 then
+		return false, string.format("attach point out of range (%.1f)", distance)
+	end
+
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { character }
+
+	local result = Workspace:Raycast(head.Position, offset, params)
+	if not result then
+		return false, "server raycast missed"
+	end
+
+	if isPlayerCharacter(result.Instance) then
+		return false, "hit a player character"
+	end
+
+	if (result.Position - attachPoint).Magnitude > 5 then
+		return false, "attach point does not match server raycast"
+	end
+
+	if (result.Position - root.Position).Magnitude > GrappleConstants.MAX_RANGE + 8 then
+		return false, "root too far from attach point"
+	end
+
+	return true
+end
+
+local function sendGrappleResult(player, requestId, accepted, attachPoint, reason)
+	grappleResult:FireClient(player, requestId, accepted, attachPoint or Vector3.zero, reason or "")
+end
+
+local function validateGrappleRequest(player, origin, direction, clientAttachPoint)
+	if typeof(origin) ~= "Vector3" then
+		return false, "non-Vector3 ray origin"
+	end
+	if typeof(direction) ~= "Vector3" then
+		return false, "non-Vector3 ray direction"
+	end
+	if direction.Magnitude < 0.8 or direction.Magnitude > 1.2 then
+		return false, string.format("bad ray direction magnitude=%.3f", direction.Magnitude)
+	end
+	if clientAttachPoint ~= nil and typeof(clientAttachPoint) ~= "Vector3" then
+		return false, "non-Vector3 client attach point"
+	end
+
+	local character = player.Character
+	local head = character and character:FindFirstChild("Head")
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not character or not head or not root then
+		return false, "missing character parts"
+	end
+
+	if (origin - head.Position).Magnitude > MAX_GRAPPLE_CAMERA_OFFSET then
+		return false, "ray origin too far from character"
+	end
+
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { character }
+
+	local result = Workspace:Raycast(origin, direction.Unit * GrappleConstants.MAX_RANGE, params)
+	if not result then
+		return false, "server raycast missed"
+	end
+
+	if isPlayerCharacter(result.Instance) then
+		return false, "hit a player character"
+	end
+
+	if clientAttachPoint and (result.Position - clientAttachPoint).Magnitude > 7 then
+		return false, "client attach point does not match server raycast"
+	end
+
+	if (result.Position - root.Position).Magnitude > GrappleConstants.MAX_RANGE + 8 then
+		return false, "root too far from attach point"
+	end
+
+	return true, nil, result.Position
+end
+
+local function getHorizontalSpeed(player)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return 0
+	end
+
+	local velocity = root.AssemblyLinearVelocity
+	return Vector3.new(velocity.X, 0, velocity.Z).Magnitude
+end
 
 dashRequest.OnServerEvent:Connect(function(player, direction)
 	-- Validate direction is a unit vector on the XZ plane (reject spoofed values)
@@ -54,7 +183,7 @@ dashRequest.OnServerEvent:Connect(function(player, direction)
 	-- Enforce server-side cooldown
 	local lastDash = dashCooldowns[player]
 	if lastDash and (now - lastDash) < Constants.DASH_COOLDOWN then
-		warn(string.format("[Validator] %s dash on cooldown (%.2fs remaining) — rejected",
+		print(string.format("[Validator] %s dash on cooldown (%.2fs remaining) — rejected",
 			player.Name, Constants.DASH_COOLDOWN - (now - lastDash)))
 		return
 	end
@@ -68,14 +197,71 @@ dashRequest.OnServerEvent:Connect(function(player, direction)
 		player.Name, Constants.DASH_DURATION + 0.5))
 end)
 
--- Grapple speed window: the LinearVelocity constraint can push the character well
--- above MAX_ALLOWED_SPEED. Open a window for MAX_DURATION + 2s of momentum bleed-off.
-grappleRequest.OnServerEvent:Connect(function(player, _attachPoint)
+-- Grapple speed window: validate the requested hook before allowing speed bursts.
+grappleRequest.OnServerEvent:Connect(function(player, requestId, origin, direction, clientAttachPoint)
 	local now = os.clock()
+
+	if typeof(requestId) ~= "number" then
+		warn(string.format("[Validator] %s sent grapple without numeric request id — rejected", player.Name))
+		return
+	end
+
+	if activeGrapples[player] then
+		print(string.format("[Validator] %s grapple already active — rejected", player.Name))
+		sendGrappleResult(player, requestId, false, nil, "grapple already active")
+		return
+	end
+
+	local lastGrapple = grappleCooldowns[player]
+	if lastGrapple and (now - lastGrapple) < GrappleConstants.COOLDOWN then
+		print(string.format("[Validator] %s grapple on cooldown (%.2fs remaining) — rejected",
+			player.Name, GrappleConstants.COOLDOWN - (now - lastGrapple)))
+		sendGrappleResult(player, requestId, false, nil, "grapple on cooldown")
+		return
+	end
+
+	local ok, reason, canonicalAttachPoint = validateGrappleRequest(player, origin, direction, clientAttachPoint)
+	if not ok then
+		warn(string.format("[Validator] %s grapple rejected — %s", player.Name, reason))
+		sendGrappleResult(player, requestId, false, nil, reason)
+		return
+	end
+
 	local windowLen = GrappleConstants.MAX_DURATION + 2
+	activeGrapples[player] = true
 	grappleWindows[player] = now + windowLen
+	task.delay(windowLen, function()
+		if activeGrapples[player] and grappleWindows[player] and os.clock() >= grappleWindows[player] then
+			activeGrapples[player] = nil
+			grappleCooldowns[player] = os.clock()
+		end
+	end)
+	sendGrappleResult(player, requestId, true, canonicalAttachPoint, nil)
 	print(string.format("[Validator] %s grapple started — speed window open for %.1fs",
 		player.Name, windowLen))
+end)
+
+grappleEnded.OnServerEvent:Connect(function(player, didSlingshot)
+	if not activeGrapples[player] then
+		return
+	end
+
+	local now = os.clock()
+	activeGrapples[player] = nil
+	grappleCooldowns[player] = now
+	grappleWindows[player] = now + GRAPPLE_POST_WINDOW
+	if didSlingshot == true then
+		task.delay(0.08, function()
+			local horizontalSpeed = getHorizontalSpeed(player)
+			if horizontalSpeed >= GrappleConstants.SLINGSHOT_MIN_SPEED then
+				StatsTracker.recordGrappleSlingshot(player)
+			else
+				print(string.format("[Validator] %s slingshot claim rejected (%.1f < %.1f)",
+					player.Name, horizontalSpeed, GrappleConstants.SLINGSHOT_MIN_SPEED))
+			end
+		end)
+	end
+	print(string.format("[Validator] %s grapple ended — speed window closing", player.Name))
 end)
 
 -- ── Respawn baseline reset ────────────────────────────────────────────────────
@@ -150,6 +336,8 @@ Players.PlayerRemoving:Connect(function(player)
 	dashWindows[player]    = nil
 	grappleWindows[player] = nil
 	dashCooldowns[player]  = nil
+	grappleCooldowns[player] = nil
+	activeGrapples[player] = nil
 	print(string.format("[Validator] Cleaned up state for %s", player.Name))
 end)
 

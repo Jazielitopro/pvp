@@ -23,6 +23,10 @@ if not remotes then error("[MatchController] Remotes folder not found — Remote
 local scoreUpdated     = remotes:WaitForChild("ScoreUpdated",     15)
 local matchStarted     = remotes:WaitForChild("MatchStarted",     15)
 local matchEnded       = remotes:WaitForChild("MatchEnded",       15)
+local matchSummary     = remotes:WaitForChild("MatchSummary",     15)
+local medalAwarded     = remotes:WaitForChild("MedalAwarded",     15)
+local roundContract    = remotes:WaitForChild("RoundContract",    15)
+local contractUpdated  = remotes:WaitForChild("RoundContractUpdated", 15)
 local playerDied       = remotes:WaitForChild("PlayerDied",       15)
 local intermissionTick = remotes:WaitForChild("IntermissionTick", 15)
 -- ModeSelected and TeamAssigned are new — warn clearly if missing instead of hanging forever
@@ -33,6 +37,7 @@ if not teamAssignedEvt then warn("[MatchController] TeamAssigned remote missing 
 
 local MatchConstants = require(game.ReplicatedStorage.Shared.Constants.MatchConstants)
 local HUD            = require(game.ReplicatedStorage.Client.HUD)
+local Theme          = require(game.ReplicatedStorage.Client.UITheme)
 
 print("[MatchController] Initialized for", player.Name)
 if typeof(HUD.setScores) ~= "function" then
@@ -97,6 +102,8 @@ panel.Parent                 = gui
 local panelCorner = Instance.new("UICorner")
 panelCorner.CornerRadius = UDim.new(0, 12)
 panelCorner.Parent = panel
+Theme.applyStroke(panel, Theme.colors.cyan, 0.5, 1.5)
+Theme.applyGradient(panel, Theme.colors.panelLift, Theme.colors.panel, 90)
 
 -- Top accent bar (color-coded per mode)
 local accentBar = Instance.new("Frame")
@@ -239,6 +246,307 @@ killFeedLayout.VerticalAlignment  = Enum.VerticalAlignment.Top
 killFeedLayout.Padding           = UDim.new(0, 4)
 killFeedLayout.Parent            = killFeedFrame
 
+-- Skill medal popups.
+local medalPanel = Instance.new("Frame")
+medalPanel.Name                   = "MedalPopup"
+medalPanel.Size                   = UDim2.new(0, 320, 0, 78)
+medalPanel.AnchorPoint            = Vector2.new(0.5, 0)
+medalPanel.Position               = UDim2.new(0.5, 0, 0.31, 0)
+medalPanel.BackgroundColor3       = Color3.fromRGB(10, 10, 10)
+medalPanel.BackgroundTransparency = 1
+medalPanel.BorderSizePixel        = 0
+medalPanel.Visible                = false
+medalPanel.ZIndex                 = 34
+medalPanel.Parent                 = gui
+local medalCorner = Instance.new("UICorner")
+medalCorner.CornerRadius = UDim.new(0, 12)
+medalCorner.Parent = medalPanel
+Theme.applyStroke(medalPanel, Theme.colors.gold, 0.42, 1.5)
+Theme.applyGradient(medalPanel, Theme.colors.panelLift, Theme.colors.panel, 90)
+
+local medalTitle = Instance.new("TextLabel")
+medalTitle.Size                   = UDim2.new(1, -20, 0, 34)
+medalTitle.Position               = UDim2.new(0, 10, 0, 8)
+medalTitle.BackgroundTransparency = 1
+medalTitle.TextColor3             = Color3.fromRGB(255, 210, 60)
+medalTitle.TextScaled             = true
+medalTitle.Font                   = Enum.Font.GothamBold
+medalTitle.Text                   = ""
+medalTitle.ZIndex                 = 35
+medalTitle.Parent                 = medalPanel
+
+local medalDesc = Instance.new("TextLabel")
+medalDesc.Size                   = UDim2.new(1, -20, 0, 24)
+medalDesc.Position               = UDim2.new(0, 10, 0, 44)
+medalDesc.BackgroundTransparency = 1
+medalDesc.TextColor3             = Color3.fromRGB(230, 230, 230)
+medalDesc.TextScaled             = true
+medalDesc.Font                   = Enum.Font.Gotham
+medalDesc.Text                   = ""
+medalDesc.ZIndex                 = 35
+medalDesc.Parent                 = medalPanel
+
+-- Round contract card. This is intentionally lightweight until contracts are
+-- proven fun enough to persist as progression.
+local contractPanel = Instance.new("Frame")
+contractPanel.Name                   = "RoundContract"
+contractPanel.Size                   = UDim2.new(0, 340, 0, 74)
+contractPanel.AnchorPoint            = Vector2.new(0, 0)
+contractPanel.Position               = UDim2.new(0, 14, 0.18, 0)
+contractPanel.BackgroundColor3       = Color3.fromRGB(12, 12, 12)
+contractPanel.BackgroundTransparency = 0.22
+contractPanel.BorderSizePixel        = 0
+contractPanel.Visible                = false
+contractPanel.ZIndex                 = 31
+contractPanel.Parent                 = gui
+local contractCorner = Instance.new("UICorner")
+contractCorner.CornerRadius = UDim.new(0, 10)
+contractCorner.Parent = contractPanel
+Theme.applyStroke(contractPanel, Theme.colors.cyan, 0.46, 1.5)
+Theme.applyGradient(contractPanel, Theme.colors.panelLift, Theme.colors.panel, 90)
+
+local contractTitle = Instance.new("TextLabel")
+contractTitle.Name                   = "Title"
+contractTitle.Size                   = UDim2.new(1, -20, 0, 28)
+contractTitle.Position               = UDim2.new(0, 10, 0, 8)
+contractTitle.BackgroundTransparency = 1
+contractTitle.TextColor3             = Color3.fromRGB(80, 220, 255)
+contractTitle.TextScaled             = true
+contractTitle.Font                   = Enum.Font.GothamBold
+contractTitle.TextXAlignment         = Enum.TextXAlignment.Left
+contractTitle.Text                   = "ROUND CONTRACT"
+contractTitle.ZIndex                 = 32
+contractTitle.Parent                 = contractPanel
+
+local contractDesc = Instance.new("TextLabel")
+contractDesc.Name                   = "Desc"
+contractDesc.Size                   = UDim2.new(1, -20, 0, 26)
+contractDesc.Position               = UDim2.new(0, 10, 0, 40)
+contractDesc.BackgroundTransparency = 1
+contractDesc.TextColor3             = Color3.fromRGB(235, 235, 235)
+contractDesc.TextScaled             = true
+contractDesc.Font                   = Enum.Font.Gotham
+contractDesc.TextXAlignment         = Enum.TextXAlignment.Left
+contractDesc.Text                   = ""
+contractDesc.ZIndex                 = 32
+contractDesc.Parent                 = contractPanel
+
+-- Post-match performance summary.
+local summaryPanel = Instance.new("Frame")
+summaryPanel.Name                   = "MatchSummary"
+summaryPanel.Size                   = UDim2.new(0, 560, 0, 340)
+summaryPanel.AnchorPoint            = Vector2.new(0.5, 0.5)
+summaryPanel.Position               = UDim2.new(0.5, 0, 0.58, 0)
+summaryPanel.BackgroundColor3       = Color3.fromRGB(10, 10, 10)
+summaryPanel.BackgroundTransparency = 0.18
+summaryPanel.BorderSizePixel        = 0
+summaryPanel.Visible                = false
+summaryPanel.ZIndex                 = 32
+summaryPanel.Parent                 = gui
+local summaryCorner = Instance.new("UICorner")
+summaryCorner.CornerRadius = UDim.new(0, 10)
+summaryCorner.Parent = summaryPanel
+Theme.applyStroke(summaryPanel, Theme.colors.gold, 0.32, 2)
+Theme.applyGradient(summaryPanel, Theme.colors.panelLift, Theme.colors.panel, 90)
+
+local summaryTitle = Instance.new("TextLabel")
+summaryTitle.Name                   = "Title"
+summaryTitle.Size                   = UDim2.new(1, -24, 0, 32)
+summaryTitle.Position               = UDim2.new(0, 12, 0, 10)
+summaryTitle.BackgroundTransparency = 1
+summaryTitle.TextColor3             = Color3.fromRGB(255, 210, 60)
+summaryTitle.TextScaled             = true
+summaryTitle.Font                   = Enum.Font.GothamBold
+summaryTitle.TextXAlignment         = Enum.TextXAlignment.Left
+summaryTitle.Text                   = "MATCH BREAKDOWN"
+summaryTitle.ZIndex                 = 33
+summaryTitle.Parent                 = summaryPanel
+
+local summaryRows = {}
+local mvpRows = {}
+
+local function makeSummaryRow(index)
+	local row = Instance.new("TextLabel")
+	row.Name                   = "Row" .. index
+	row.Size                   = UDim2.new(1, -24, 0, 34)
+	row.Position               = UDim2.new(0, 12, 0, 48 + (index - 1) * 38)
+	row.BackgroundTransparency = 1
+	row.TextColor3             = Color3.fromRGB(235, 235, 235)
+	row.TextScaled             = true
+	row.Font                   = Enum.Font.Gotham
+	row.TextXAlignment         = Enum.TextXAlignment.Left
+	row.Text                   = ""
+	row.ZIndex                 = 33
+	row.Parent                 = summaryPanel
+	return row
+end
+
+for i = 1, 5 do
+	summaryRows[i] = makeSummaryRow(i)
+end
+
+local function makeMvpRow(index)
+	local row = Instance.new("TextLabel")
+	row.Name                   = "MVP" .. index
+	row.Size                   = UDim2.new(1, -24, 0, 28)
+	row.Position               = UDim2.new(0, 12, 0, 244 + (index - 1) * 30)
+	row.BackgroundTransparency = 1
+	row.TextColor3             = Color3.fromRGB(80, 220, 255)
+	row.TextScaled             = true
+	row.Font                   = Enum.Font.GothamBold
+	row.TextXAlignment         = Enum.TextXAlignment.Left
+	row.Text                   = ""
+	row.ZIndex                 = 33
+	row.Parent                 = summaryPanel
+	return row
+end
+
+for i = 1, 3 do
+	mvpRows[i] = makeMvpRow(i)
+end
+
+local contractHideToken = 0
+local medalToken = 0
+
+local function formatSummaryRow(index, entry)
+	local contract = entry.contract
+	local contractMark = "--"
+	if contract then
+		contractMark = contract.completed and "OK" or string.format("%d/%d", contract.progress or 0, contract.target or 0)
+	end
+	local displayName = entry.name or "?"
+	if entry.rank then
+		displayName = string.format("{%s} %s", entry.rank, displayName)
+	end
+	if entry.title then
+		displayName = string.format("[%s] %s", entry.title, displayName)
+	end
+	local ratingText = entry.rating and string.format(" R:%d(%+d)", entry.rating, entry.ratingDelta or 0) or ""
+
+	return string.format(
+		"#%d %s  K:%d D:%d DMG:%d  PP:%d CL:%d AIR:%d SL:%d  C:%s XP:%d +%dC Lv:%d%s",
+		index,
+		displayName,
+		entry.kills or 0,
+		entry.deaths or 0,
+		entry.damageDealt or 0,
+		entry.perfectParries or 0,
+		entry.parryClashes or 0,
+		entry.airShots or 0,
+		entry.grappleSlingshots or 0,
+		contractMark,
+		entry.xpEarned or 0,
+		entry.coinsEarned or 0,
+		entry.level or 1,
+		ratingText
+	)
+end
+
+local function showRoundContract(contract, isProgressUpdate)
+	if not contract then return end
+
+	if contract.completed then
+		contractTitle.Text = "CONTRACT COMPLETE"
+		contractTitle.TextColor3 = Color3.fromRGB(120, 255, 140)
+	else
+		contractTitle.Text = "CONTRACT: " .. (contract.name or "Round Goal")
+		contractTitle.TextColor3 = Color3.fromRGB(80, 220, 255)
+	end
+
+	contractDesc.Text = string.format(
+		"%s  %d/%d  (%d XP)",
+		contract.description or "Play your style",
+		contract.progress or 0,
+		contract.target or 0,
+		contract.rewardXp or 0
+	)
+	contractPanel.Visible = true
+
+	contractHideToken += 1
+	local hideToken = contractHideToken
+	local duration = contract.completed and 5 or (isProgressUpdate and 3 or 6)
+	task.delay(duration, function()
+		if hideToken ~= contractHideToken then return end
+		contractPanel.Visible = false
+	end)
+end
+
+local function medalColor(colorKey)
+	if colorKey == "cyan" then
+		return Color3.fromRGB(80, 220, 255)
+	elseif colorKey == "red" then
+		return Color3.fromRGB(255, 90, 90)
+	elseif colorKey == "white" then
+		return Color3.fromRGB(245, 245, 245)
+	end
+	return Color3.fromRGB(255, 210, 60)
+end
+
+local function showMedal(medal)
+	if not medal then return end
+
+	medalToken += 1
+	local token = medalToken
+	medalTitle.Text = medal.name or "MEDAL"
+	medalDesc.Text = medal.description or ""
+	medalTitle.TextColor3 = medalColor(medal.color)
+	medalPanel.Visible = true
+	medalPanel.BackgroundTransparency = 0.18
+	medalTitle.TextTransparency = 0
+	medalDesc.TextTransparency = 0
+
+	task.delay(1.8, function()
+		if token ~= medalToken then return end
+		TweenService:Create(medalPanel, FADE_OUT, { BackgroundTransparency = 1 }):Play()
+		TweenService:Create(medalTitle, FADE_OUT, { TextTransparency = 1 }):Play()
+		TweenService:Create(medalDesc, FADE_OUT, { TextTransparency = 1 }):Play()
+		task.delay(0.5, function()
+			if token == medalToken then
+				medalPanel.Visible = false
+			end
+		end)
+	end)
+end
+
+local function showMatchSummary(summary)
+	local winnerName = summary and summary.winnerName or "Draw"
+	local players = summary and summary.players or {}
+	local mvps = summary and summary.mvps or {}
+
+	summaryPanel.Visible = true
+	summaryTitle.Text = (winnerName == "Draw") and "MATCH DRAW" or ("WINNER: " .. winnerName)
+
+	for index, row in ipairs(summaryRows) do
+		local entry = players[index]
+		row.Visible = entry ~= nil
+		if entry then
+			row.TextColor3 = (entry.userId == player.UserId)
+				and Color3.fromRGB(255, 210, 60)
+				or Color3.fromRGB(235, 235, 235)
+			row.Text = formatSummaryRow(index, entry)
+		end
+	end
+
+	for index, row in ipairs(mvpRows) do
+		local entry = mvps[index]
+		row.Visible = entry ~= nil
+		if entry then
+			local displayName = entry.name or "?"
+			if entry.rank then
+				displayName = string.format("{%s} %s", entry.rank, displayName)
+			end
+			if entry.title then
+				displayName = string.format("[%s] %s", entry.title, displayName)
+			end
+			row.Text = string.format("%s: %s (%d)", entry.label or "MVP", displayName, entry.value or 0)
+		end
+	end
+
+	task.delay(math.max((MatchConstants.END_RESET_DELAY or 4) - 0.5, 1), function()
+		summaryPanel.Visible = false
+	end)
+end
+
 -- ── Local state ───────────────────────────────────────────────────────────────
 
 local localScores    = {}
@@ -318,6 +626,10 @@ end
 -- Legacy number format (old server) is handled gracefully.
 
 intermissionTick.OnClientEvent:Connect(function(data)
+	summaryPanel.Visible = false
+	contractPanel.Visible = false
+	medalPanel.Visible = false
+
 	-- Backward-compat: old server sent a plain number
 	if type(data) == "number" then
 		panel.Visible = true
@@ -370,6 +682,7 @@ end)
 
 matchStarted.OnClientEvent:Connect(function()
 	panel.Visible = false
+	summaryPanel.Visible = false
 	showAnnouncement("FIGHT!", 2.5)
 	print("[MatchController] Match started!")
 end)
@@ -382,16 +695,45 @@ matchEnded.OnClientEvent:Connect(function(winnerName, playerList, teams)
 
 	local isMyWin = (winnerName == player.DisplayName)
 		or (myTeam and winnerName == ("Team " .. myTeam))
-	local msg = isMyWin and "YOU WIN!" or (winnerName .. " wins!")
+	local msg
+	if winnerName == "Draw" then
+		msg = "DRAW!"
+	else
+		msg = isMyWin and "YOU WIN!" or (winnerName .. " wins!")
+	end
 	showAnnouncement(msg, MatchConstants.END_RESET_DELAY - 1)
 	print(string.format("[MatchController] Match over. Winner: %s", winnerName))
 end)
+
+if matchSummary then
+	matchSummary.OnClientEvent:Connect(showMatchSummary)
+end
+
+if medalAwarded then
+	medalAwarded.OnClientEvent:Connect(showMedal)
+end
+
+if roundContract then
+	roundContract.OnClientEvent:Connect(showRoundContract)
+end
+
+if contractUpdated then
+	contractUpdated.OnClientEvent:Connect(function(contract)
+		showRoundContract(contract, true)
+	end)
+end
 
 -- ── Remote: ModeSelected ─────────────────────────────────────────────────────
 
 if modeSelectedEvt then
 	modeSelectedEvt.OnClientEvent:Connect(function(modeKey, modeName, modeDesc, isTeamBased, scoreLimit)
 		activeModeKey = modeKey
+		if not isTeamBased then
+			myTeam = nil
+		end
+		if HUD.setActiveMode then
+			HUD.setActiveMode(modeKey, modeName, modeDesc, isTeamBased, scoreLimit)
+		end
 		print(string.format("[MatchController] Mode: %s — %s (limit: %d)",
 			modeKey, modeName, scoreLimit or 0))
 	end)

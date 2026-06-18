@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="980" viewBox="0 0 1440 980">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#06080E"/><stop offset="1" stop-color="#121726"/></linearGradient><style>.title{font:700 28px Arial;fill:#F5F8FF;letter-spacing:1.2px}.h2{font:700 18px Arial;fill:#F5F8FF;letter-spacing:.8px}.label{font:700 13px Arial;fill:#F5F8FF;letter-spacing:.5px}.body{font:500 13px Arial;fill:#9EACC6}.tiny{font:700 10px Arial;fill:#9EACC6;letter-spacing:.5px}.panel{fill:#121726;stroke:#526996;stroke-opacity:.75;stroke-width:1.5}</style></defs>
+  <rect width="1440" height="980" fill="url(#bg)"/>
+  <text x="64" y="68" class="title">00 BENCHMARK / ROBLOX UI PATTERNS</text>
+  <text x="64" y="96" class="body">Consulted 2026-06-01. Adapt familiar interaction patterns without copying another game's visual identity.</text>
+  <g transform="translate(64 148)">
+    <rect width="620" height="310" rx="20" class="panel"/><rect width="8" height="310" rx="4" fill="#40E6FF"/>
+    <text x="36" y="48" class="h2">RIVALS</text><text x="36" y="76" class="tiny" fill="#40E6FF">PRIMARY REFERENCE / COMPETITIVE FPS</text>
+    <text x="36" y="126" class="label">ADAPT</text><text x="36" y="154" class="body">Compact combat HUD with a quiet crosshair area.</text><text x="36" y="180" class="body">Short-match waiting, team, score, and post-match states.</text><text x="36" y="206" class="body">Clear progression entry point outside the aiming center.</text>
+    <text x="36" y="266" class="tiny">roblox.com/games/17625359962/RIVALS</text>
+  </g>
+  <g transform="translate(720 148)">
+    <rect width="656" height="310" rx="20" class="panel"/><rect width="8" height="310" rx="4" fill="#FF56AE"/>
+    <text x="36" y="48" class="h2">BLADE BALL</text><text x="36" y="76" class="tiny" fill="#FF56AE">SECONDARY REFERENCE / TIMING + TOUCH</text>
+    <text x="36" y="126" class="label">ADAPT</text><text x="36" y="154" class="body">Large touch actions for timing-critical mechanics.</text><text x="36" y="180" class="body">Immediate visual feedback for parry windows and cooldowns.</text><text x="36" y="206" class="body">Desktop, console, and tap parity as an explicit design rule.</text>
+    <text x="36" y="266" class="tiny">roblox.com/games/13772394625/Blade-Ball</text>
+  </g>
+  <g transform="translate(64 494)">
+    <rect width="620" height="310" rx="20" class="panel"/><rect width="8" height="310" rx="4" fill="#9A65FF"/>
+    <text x="36" y="48" class="h2">BLOX FRUITS</text><text x="36" y="76" class="tiny" fill="#9A65FF">SECONDARY REFERENCE / PERSISTENT PROGRESSION</text>
+    <text x="36" y="126" class="label">ADAPT</text><text x="36" y="154" class="body">Stable Shop, Season, and Profile navigation.</text><text x="36" y="180" class="body">Readable owned, equipped, and locked inventory states.</text><text x="36" y="206" class="body">Progression depth without adding combat power.</text>
+    <text x="36" y="266" class="tiny">roblox.com/games/2753915549/Blox-Fruits</text>
+  </g>
+  <g transform="translate(720 494)">
+    <rect width="656" height="310" rx="20" class="panel"/><rect width="8" height="310" rx="4" fill="#FFD854"/>
+    <text x="36" y="48" class="h2">GROW A GARDEN</text><text x="36" y="76" class="tiny" fill="#FFD854">SECONDARY REFERENCE / FRIENDLY REWARD LOOP</text>
+    <text x="36" y="126" class="label">ADAPT</text><text x="36" y="154" class="body">Friendly claim actions with simple reward presentation.</text><text x="36" y="180" class="body">Legible shop cards and visible restock rhythm.</text><text x="36" y="206" class="body">Low-friction progression that welcomes repeat visits.</text>
+    <text x="36" y="266" class="tiny">roblox.com/games/126884695634066/Grow-a-Garden</text>
+  </g>
+  <rect x="64" y="846" width="1312" height="82" rx="18" class="panel"/>
+  <text x="88" y="878" class="tiny" fill="#70FF97">PARRYHOOK IDENTITY</text><text x="88" y="904" class="body">Keep the dark arena, restrained glass surfaces, cyan movement, gold rewards, violet progression, and pink parry accents.</text>
+</svg>

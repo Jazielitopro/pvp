@@ -8,17 +8,19 @@
 
 local WeaponConstants = require(game.ReplicatedStorage.Shared.Constants.WeaponConstants)
 local HealthSystem    = require(script.Parent.HealthSystem)
+local StatsTracker    = require(script.Parent.StatsTracker)
 
 local DamageApplicator = {}
 
 -- Apply a fixed damage chunk to victim.
 -- attacker may be nil (environmental damage).
 -- Returns true if the hit was lethal.
-function DamageApplicator.applyDamage(victim, attacker, damage)
+function DamageApplicator.applyDamage(victim, attacker, damage, hitTag)
 	damage = damage or WeaponConstants.DAMAGE_PER_HIT
 	print(string.format("[Damage] %s → %s: %.0f damage",
 		attacker and attacker.Name or "ENV", victim.Name, damage))
-	return HealthSystem.takeDamage(victim, attacker, damage)
+	StatsTracker.recordDamage(attacker, damage, hitTag)
+	return HealthSystem.takeDamage(victim, attacker, damage, hitTag)
 end
 
 return DamageApplicator

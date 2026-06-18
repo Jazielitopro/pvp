@@ -23,10 +23,10 @@ end
 -- Fire parry VFX at the parry world position.
 -- parrierUserId : number (so clients can skip their own flash if needed)
 -- position      : Vector3
-function FeedbackDispatcher.fireParry(parrierUserId, position)
+function FeedbackDispatcher.fireParry(parrierUserId, position, parryKind)
 	print(string.format("[Feedback] Parry VFX at (%.1f,%.1f,%.1f) — userId=%d",
 		position.X, position.Y, position.Z, parrierUserId))
-	parryEffect:FireAllClients(parrierUserId, position)
+	parryEffect:FireAllClients(parrierUserId, position, parryKind)
 end
 
 return FeedbackDispatcher

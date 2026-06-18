@@ -5,11 +5,13 @@
 -- API:
 --   HUD.setHP(hp, maxHp)
 --   HUD.setAmmo(ammo, maxAmmo, isReloading)
---   HUD.setScores(scoreList)    -- array of { userId, name, kills }
+--   HUD.setScores(scoreList, teamScores) -- array of { userId, name, kills }
+--   HUD.setActiveMode(modeKey, modeName, modeDesc, isTeamBased, scoreLimit)
 --   HUD.showScoreboard(visible) -- called by HUDController on Tab hold/release
 
 local Players          = game:GetService("Players")
 local TweenService     = game:GetService("TweenService")
+local Theme            = require(game.ReplicatedStorage.Client.UITheme)
 
 local player    = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -51,9 +53,9 @@ local function panel(anchorX, anchorY, scaleX, offsetY, w, h)
 	f.BorderSizePixel        = 0
 	f.ZIndex                 = 14
 	f.Parent                 = screen
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 7)
-	corner.Parent = f
+	Theme.applyCorner(f, Theme.smallCorner)
+	Theme.applyStroke(f, Theme.colors.cyan, 0.62, 1)
+	Theme.applyGradient(f, Theme.colors.panelLift, Theme.colors.panel, 90)
 	return f
 end
 
@@ -174,6 +176,40 @@ local reloadLbl = label(ammoPanel,
 	"RELOADING", C.reloadOrange, Enum.Font.GothamBold)
 reloadLbl.Visible = false
 
+-- Match info panel (top-center)
+local INFO_W, INFO_H = 280, 56
+local infoPanel = Instance.new("Frame")
+infoPanel.Name                   = "MatchInfo"
+infoPanel.Size                   = UDim2.new(0, INFO_W, 0, INFO_H)
+infoPanel.AnchorPoint            = Vector2.new(0.5, 0)
+infoPanel.Position               = UDim2.new(0.5, 0, 0, 14)
+infoPanel.BackgroundColor3       = C.panelBg
+infoPanel.BackgroundTransparency = C.panelAlpha
+infoPanel.BorderSizePixel        = 0
+infoPanel.ZIndex                 = 14
+infoPanel.Parent                 = screen
+Theme.applyCorner(infoPanel, Theme.smallCorner)
+Theme.applyStroke(infoPanel, Theme.colors.gold, 0.58, 1)
+Theme.applyGradient(infoPanel, Theme.colors.panelLift, Theme.colors.panel, 90)
+
+local modeLabel = label(infoPanel,
+	UDim2.new(1, -130, 0, 22),
+	UDim2.new(0, 10, 0, 6),
+	"MODE: WAITING", C.scoreGold, Enum.Font.GothamBold)
+modeLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local objectiveLabel = label(infoPanel,
+	UDim2.new(1, -130, 0, 18),
+	UDim2.new(0, 10, 0, 30),
+	"", C.textDim, Enum.Font.Gotham)
+objectiveLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local teamScoreLabel = label(infoPanel,
+	UDim2.new(0, 100, 0, 26),
+	UDim2.new(1, -110, 0.5, -13),
+	"A 0 - 0 B", C.textWhite, Enum.Font.GothamBold, Enum.TextXAlignment.Right)
+teamScoreLabel.Visible = false
+
 -- Bullet icon pool — rebuilt when maxAmmo changes
 local bulletIcons = {}
 local currentMaxAmmo = 0
@@ -224,9 +260,9 @@ sbPanel.BackgroundTransparency = 0.2
 sbPanel.BorderSizePixel        = 0
 sbPanel.ZIndex                 = 29
 sbPanel.Parent                 = sbOverlay
-local sbCorner = Instance.new("UICorner")
-sbCorner.CornerRadius = UDim.new(0, 10)
-sbCorner.Parent = sbPanel
+Theme.applyCorner(sbPanel, Theme.corner)
+Theme.applyStroke(sbPanel, Theme.colors.cyan, 0.35, 2)
+Theme.applyGradient(sbPanel, Theme.colors.panelLift, Theme.colors.panel, 90)
 
 -- Scoreboard header
 local sbHeader = label(sbPanel,
@@ -320,6 +356,33 @@ local function ensureRows(count)
 end
 
 local storedScores = {}
+local storedTeamScores = { A = 0, B = 0 }
+local activeMode = {
+	key = nil,
+	name = "WAITING",
+	desc = "",
+	teamBased = false,
+	scoreLimit = nil,
+}
+
+local function refreshMatchInfo()
+	local modeName = activeMode.name or activeMode.key or "WAITING"
+	modeLabel.Text = string.format("MODE: %s", string.upper(modeName))
+
+	if activeMode.scoreLimit and activeMode.scoreLimit > 0 then
+		objectiveLabel.Text = string.format("First to %d", activeMode.scoreLimit)
+	else
+		objectiveLabel.Text = activeMode.desc or ""
+	end
+
+	local showTeamScores = activeMode.teamBased == true
+	teamScoreLabel.Visible = showTeamScores
+	if showTeamScores then
+		local aScore = storedTeamScores.A or 0
+		local bScore = storedTeamScores.B or 0
+		teamScoreLabel.Text = string.format("A %d - %d B", aScore, bScore)
+	end
+end
 
 local function refreshScoreboard()
 	ensureRows(#storedScores)
@@ -386,11 +449,22 @@ function HUD.setAmmo(ammo, maxAmmo, isReloading)
 	end
 end
 
-function HUD.setScores(scoreList)
-	storedScores = scoreList
+function HUD.setScores(scoreList, teamScores)
+	storedScores = scoreList or {}
+	storedTeamScores = teamScores or { A = 0, B = 0 }
+	refreshMatchInfo()
 	if sbOverlay.Visible then
 		refreshScoreboard()
 	end
+end
+
+function HUD.setActiveMode(modeKey, modeName, modeDesc, isTeamBased, scoreLimit)
+	activeMode.key = modeKey
+	activeMode.name = modeName or modeKey or "WAITING"
+	activeMode.desc = modeDesc or ""
+	activeMode.teamBased = isTeamBased == true
+	activeMode.scoreLimit = scoreLimit
+	refreshMatchInfo()
 end
 
 function HUD.showScoreboard(visible)
@@ -399,5 +473,7 @@ function HUD.showScoreboard(visible)
 		refreshScoreboard()
 	end
 end
+
+refreshMatchInfo()
 
 return HUD

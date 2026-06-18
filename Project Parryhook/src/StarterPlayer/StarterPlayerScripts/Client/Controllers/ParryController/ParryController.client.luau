@@ -8,6 +8,7 @@ local Players          = game:GetService("Players")
 
 local player    = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
+local camera    = workspace.CurrentCamera
 
 local remotes      = game.ReplicatedStorage:WaitForChild("Remotes")
 local parryRequest = remotes:WaitForChild("ParryRequest")
@@ -16,6 +17,13 @@ local parryEffect  = remotes:WaitForChild("ParryEffect")
 local ParryConstants = require(game.ReplicatedStorage.Shared.Constants.ParryConstants)
 local SoundManager   = require(game.ReplicatedStorage.Client.SoundManager)
 local ScreenEffects  = require(game.ReplicatedStorage.Client.ScreenEffects)
+local CosmeticState  = require(game.ReplicatedStorage.Client.CosmeticState)
+local ClientActionGate = require(game.ReplicatedStorage.Client.ClientActionGate)
+
+if not ClientActionGate.startSingleton("ParryController") then
+	print("[ParryController] Duplicate controller ignored")
+	return
+end
 
 -- ── Screen flash UI ───────────────────────────────────────────────────────────
 
@@ -61,6 +69,8 @@ local activeWindowTween
 
 local function showParryWindow()
 	if activeWindowTween then activeWindowTween:Cancel() end
+	local primaryColor = CosmeticState.getColors("parryAura")
+	windowFlash.BackgroundColor3 = primaryColor
 	windowFlash.BackgroundTransparency = 0.3
 	activeWindowTween = TweenService:Create(windowFlash, WINDOW_OUT,
 		{ BackgroundTransparency = 1 })
@@ -77,13 +87,14 @@ end
 -- Expanding flat disk (CylinderMesh) that blooms outward and fades at the hit point.
 
 local function spawnParryRing(position)
+	local primaryColor = CosmeticState.getColors("parryAura")
 	local part          = Instance.new("Part")
 	part.Anchored       = true
 	part.CanCollide     = false
 	part.CastShadow     = false
 	part.Size           = Vector3.new(0.3, 0.15, 0.3)
 	part.Material       = Enum.Material.Neon
-	part.Color          = Color3.fromRGB(80, 220, 200)   -- cyan ring
+	part.Color          = primaryColor
 	part.Transparency   = 0
 	part.CFrame         = CFrame.new(position)
 	part.Parent         = workspace
@@ -118,21 +129,24 @@ UserInputService.InputBegan:Connect(function(input, processed)
 		print(string.format("[ParryController] Parry on cooldown (%.2fs remaining)", cooldownUntil - now))
 		return
 	end
+	local canParry = ClientActionGate.try("parry.request", ParryConstants.COOLDOWN)
+	if not canParry then return end
 	cooldownUntil = now + ParryConstants.COOLDOWN
 
 	print("[ParryController] Parry input — request sent to server")
-	parryRequest:FireServer(now)
+	parryRequest:FireServer(now, camera.CFrame.LookVector)
 	showParryWindow()
 	SoundManager.play("parry_swing")
 end)
 
 -- ── Parry confirmed ───────────────────────────────────────────────────────────
 
-parryEffect.OnClientEvent:Connect(function(_parrierUserId, position)
+parryEffect.OnClientEvent:Connect(function(_parrierUserId, position, parryKind)
 	print(string.format("[ParryController] Parry effect received at (%.1f,%.1f,%.1f)",
 		position.X, position.Y, position.Z))
 	showReflectFlash()
 	spawnParryRing(position)
 	SoundManager.play("parry_hit")
-	ScreenEffects.shake(0.18)   -- satisfying punch on successful reflect
+	local shake = (parryKind == "perfect" or parryKind == "perfect_clash") and 0.26 or 0.18
+	ScreenEffects.shake(shake)   -- satisfying punch on successful reflect
 end)

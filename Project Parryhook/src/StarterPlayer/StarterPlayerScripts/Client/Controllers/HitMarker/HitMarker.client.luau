@@ -61,13 +61,29 @@ killX.TextTransparency       = 1
 killX.ZIndex                 = 21
 killX.Parent                 = gui
 
+local skillTag = Instance.new("TextLabel")
+skillTag.Name                   = "SkillTag"
+skillTag.Size                   = UDim2.new(0, 150, 0, 24)
+skillTag.AnchorPoint            = Vector2.new(0.5, 0.5)
+skillTag.Position               = CENTER + UDim2.new(0, 0, 0, 30)
+skillTag.BackgroundTransparency = 1
+skillTag.TextColor3             = Color3.fromRGB(80, 240, 255)
+skillTag.TextScaled             = true
+skillTag.Font                   = Enum.Font.GothamBold
+skillTag.Text                   = ""
+skillTag.TextTransparency       = 1
+skillTag.ZIndex                 = 21
+skillTag.Parent                 = gui
+
 local FADE_OUT = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 local KILL_OUT = TweenInfo.new(0.5,  Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+local TAG_OUT  = TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 
 local activeKillTween
+local activeTagTween
 local activeTickTweens = {}
 
-local function showHitMarker(isKill)
+local function showHitMarker(isKill, tag)
 	for _, t in ipairs(activeTickTweens) do t:Cancel() end
 	activeTickTweens = {}
 
@@ -87,18 +103,26 @@ local function showHitMarker(isKill)
 		activeKillTween = TweenService:Create(killX, KILL_OUT, { TextTransparency = 1 })
 		activeKillTween:Play()
 	end
+
+	if tag then
+		if activeTagTween then activeTagTween:Cancel() end
+		skillTag.Text = tag
+		skillTag.TextTransparency = 0
+		activeTagTween = TweenService:Create(skillTag, TAG_OUT, { TextTransparency = 1 })
+		activeTagTween:Play()
+	end
 end
 
 print("[HitMarker] Initialized for", player.Name)
 
 -- ── Server event ──────────────────────────────────────────────────────────────
 
-hitConfirmed.OnClientEvent:Connect(function(wasKill, victimName)
+hitConfirmed.OnClientEvent:Connect(function(wasKill, victimName, hitTag)
 	if wasKill then
 		print(string.format("[HitMarker] KILL confirmed — eliminated %s", victimName or "?"))
 	else
 		print(string.format("[HitMarker] Hit confirmed — damaged %s", victimName or "?"))
 	end
-	showHitMarker(wasKill)
+	showHitMarker(wasKill, hitTag)
 	SoundManager.play(wasKill and "kill" or "hit")
 end)

@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1060" viewBox="0 0 1440 1060">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#06080E"/>
+      <stop offset="1" stop-color="#121726"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#1D243A"/>
+      <stop offset="1" stop-color="#0B0E18"/>
+    </linearGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000000" flood-opacity=".38"/></filter>
+    <style>
+      .h1{font:700 34px Arial;fill:#F5F8FF;letter-spacing:2px}
+      .h2{font:700 20px Arial;fill:#F5F8FF;letter-spacing:1px}
+      .label{font:700 14px Arial;fill:#F5F8FF;letter-spacing:.8px}
+      .body{font:500 13px Arial;fill:#9EACC6}
+      .tiny{font:700 11px Arial;fill:#9EACC6;letter-spacing:.7px}
+      .panel{fill:url(#panel);stroke:#526996;stroke-opacity:.7;stroke-width:1.5}
+    </style>
+  </defs>
+  <rect width="1440" height="1060" fill="url(#bg)"/>
+  <text x="64" y="72" class="h1">02 COMPONENTS / FRIENDLY COMPETITIVE UI</text>
+  <text x="64" y="100" class="body">Reusable Figma inventory for Roblox implementation after visual approval.</text>
+
+  <g transform="translate(64 148)">
+    <rect class="panel" width="400" height="232" rx="20" filter="url(#shadow)"/>
+    <text x="24" y="40" class="h2">PANEL / GLASS</text>
+    <text x="24" y="70" class="body">Default, lifted and danger surfaces.</text>
+    <rect x="24" y="96" width="104" height="100" rx="16" fill="#0B0E18" stroke="#526996"/>
+    <rect x="148" y="96" width="104" height="100" rx="16" fill="#1D243A" stroke="#40E6FF"/>
+    <rect x="272" y="96" width="104" height="100" rx="16" fill="#121726" stroke="#FF525C"/>
+    <text x="76" y="220" text-anchor="middle" class="tiny">DEFAULT</text>
+    <text x="200" y="220" text-anchor="middle" class="tiny">LIFTED</text>
+    <text x="324" y="220" text-anchor="middle" class="tiny">DANGER</text>
+  </g>
+
+  <g transform="translate(496 148)">
+    <rect class="panel" width="400" height="232" rx="20"/>
+    <text x="24" y="40" class="h2">BUTTON / ACTION</text>
+    <text x="24" y="70" class="body">Primary actions are obvious without visual noise.</text>
+    <rect x="24" y="96" width="164" height="44" rx="12" fill="#40E6FF"/>
+    <text x="106" y="124" text-anchor="middle" class="label" fill="#06080E">PLAY</text>
+    <rect x="212" y="96" width="164" height="44" rx="12" fill="#121726" stroke="#526996"/>
+    <text x="294" y="124" text-anchor="middle" class="label">PREVIEW</text>
+    <rect x="24" y="156" width="164" height="44" rx="12" fill="#FFD854"/>
+    <text x="106" y="184" text-anchor="middle" class="label" fill="#06080E">CLAIM +100</text>
+    <rect x="212" y="156" width="164" height="44" rx="12" fill="#121726" stroke="#526996" opacity=".45"/>
+    <text x="294" y="184" text-anchor="middle" class="label" opacity=".5">LOCKED</text>
+  </g>
+
+  <g transform="translate(928 148)">
+    <rect class="panel" width="448" height="232" rx="20"/>
+    <text x="24" y="40" class="h2">CHIP / ABILITY</text>
+    <text x="24" y="70" class="body">Readable cooldown states below the crosshair.</text>
+    <g transform="translate(24 100)">
+      <rect width="82" height="76" rx="15" fill="#121726" stroke="#40E6FF"/>
+      <text x="41" y="32" text-anchor="middle" class="label">DASH</text><text x="41" y="58" text-anchor="middle" class="tiny" fill="#70FF97">READY</text>
+      <rect x="104" width="82" height="76" rx="15" fill="#121726" stroke="#9A65FF"/>
+      <text x="145" y="32" text-anchor="middle" class="label">HOOK</text><text x="145" y="58" text-anchor="middle" class="tiny">1.8s</text>
+      <rect x="208" width="82" height="76" rx="15" fill="#FF56AE" stroke="#FF56AE"/>
+      <text x="249" y="32" text-anchor="middle" class="label" fill="#06080E">PARRY</text><text x="249" y="58" text-anchor="middle" class="tiny" fill="#06080E">ACTIVE</text>
+      <rect x="312" width="82" height="76" rx="15" fill="#121726" stroke="#526996" opacity=".45"/>
+      <text x="353" y="32" text-anchor="middle" class="label">SLIDE</text><text x="353" y="58" text-anchor="middle" class="tiny">LOCKED</text>
+    </g>
+  </g>
+
+  <g transform="translate(64 412)">
+    <rect class="panel" width="400" height="252" rx="20"/>
+    <text x="24" y="40" class="h2">CARD / SHOP ITEM</text>
+    <rect x="24" y="70" width="352" height="154" rx="16" fill="#121726" stroke="#40E6FF"/>
+    <rect x="42" y="90" width="76" height="76" rx="16" fill="#1D243A"/>
+    <circle cx="80" cy="128" r="24" fill="#40E6FF"/>
+    <text x="140" y="106" class="label">NEON BOLT</text>
+    <text x="140" y="132" class="tiny" fill="#40E6FF">RARE / PROJECTILE</text>
+    <text x="140" y="164" class="body">Owned state stays visible.</text>
+    <text x="42" y="204" class="label" fill="#FFD854">300 COINS</text>
+    <text x="336" y="204" text-anchor="end" class="tiny">SELECTED</text>
+  </g>
+
+  <g transform="translate(496 412)">
+    <rect class="panel" width="400" height="252" rx="20"/>
+    <text x="24" y="40" class="h2">CARD / REWARD</text>
+    <rect x="24" y="70" width="352" height="154" rx="16" fill="#121726" stroke="#FFD854"/>
+    <text x="44" y="104" class="tiny" fill="#FFD854">DAILY REWARD</text>
+    <text x="44" y="140" class="h2">STREAK 04</text>
+    <text x="44" y="168" class="body">+70 coins  /  +125 XP</text>
+    <rect x="218" y="178" width="140" height="32" rx="10" fill="#FFD854"/>
+    <text x="288" y="199" text-anchor="middle" class="tiny" fill="#06080E">CLAIM REWARD</text>
+  </g>
+
+  <g transform="translate(928 412)">
+    <rect class="panel" width="448" height="252" rx="20"/>
+    <text x="24" y="40" class="h2">TAB / PROGRESS / TOAST</text>
+    <rect x="24" y="70" width="104" height="36" rx="18" fill="#40E6FF"/><text x="76" y="93" text-anchor="middle" class="tiny" fill="#06080E">SHOP</text>
+    <rect x="140" y="70" width="104" height="36" rx="18" fill="#121726" stroke="#526996"/><text x="192" y="93" text-anchor="middle" class="tiny">SEASON</text>
+    <rect x="256" y="70" width="104" height="36" rx="18" fill="#121726" stroke="#526996"/><text x="308" y="93" text-anchor="middle" class="tiny">PROFILE</text>
+    <text x="24" y="142" class="tiny">CONTRACT PROGRESS</text>
+    <rect x="24" y="154" width="240" height="12" rx="6" fill="#06080E"/><rect x="24" y="154" width="164" height="12" rx="6" fill="#FFD854"/>
+    <rect x="24" y="184" width="388" height="48" rx="12" fill="#121726" stroke="#FFD854"/>
+    <rect x="24" y="184" width="5" height="48" rx="2.5" fill="#FFD854"/>
+    <text x="44" y="205" class="tiny" fill="#FFD854">CONTRACT UPDATED</text><text x="44" y="222" class="body">Daily Finisher  /  6 of 8</text>
+  </g>
+
+  <g transform="translate(64 696)">
+    <rect class="panel" width="832" height="280" rx="20"/>
+    <text x="24" y="40" class="h2">ROW / SCOREBOARD</text>
+    <text x="24" y="68" class="body">Local player, team and neutral variants keep scanning fast.</text>
+    <rect x="24" y="94" width="784" height="48" rx="12" fill="#1D243A" stroke="#40E6FF"/>
+    <text x="44" y="124" class="label" fill="#40E6FF">01</text><text x="94" y="124" class="label">YOU / SKYBREAKER</text><text x="628" y="124" class="tiny">TEAM A</text><text x="782" y="124" text-anchor="end" class="label">12 K</text>
+    <rect x="24" y="156" width="784" height="42" rx="10" fill="#121726"/>
+    <text x="44" y="182" class="tiny">02</text><text x="94" y="182" class="body">HOOKSMITH</text><text x="628" y="182" class="tiny">TEAM A</text><text x="782" y="182" text-anchor="end" class="tiny">09 K</text>
+    <rect x="24" y="212" width="784" height="42" rx="10" fill="#121726"/>
+    <text x="44" y="238" class="tiny">03</text><text x="94" y="238" class="body">VOIDRUNNER</text><text x="628" y="238" class="tiny" fill="#FF56AE">TEAM B</text><text x="782" y="238" text-anchor="end" class="tiny">08 K</text>
+  </g>
+
+  <g transform="translate(928 696)">
+    <rect class="panel" width="448" height="280" rx="20"/>
+    <text x="24" y="40" class="h2">TOUCH / ACTION</text>
+    <text x="24" y="68" class="body">44px minimum. Combat targets use 52-68px.</text>
+    <circle cx="102" cy="150" r="58" fill="#121726" stroke="#40E6FF" stroke-width="2"/><text x="102" y="156" text-anchor="middle" class="label">FIRE</text>
+    <circle cx="238" cy="142" r="50" fill="#121726" stroke="#FF56AE" stroke-width="2"/><text x="238" y="148" text-anchor="middle" class="label">PARRY</text>
+    <circle cx="352" cy="150" r="44" fill="#121726" stroke="#9A65FF" stroke-width="2"/><text x="352" y="156" text-anchor="middle" class="tiny">HOOK</text>
+    <circle cx="176" cy="226" r="36" fill="#121726" stroke="#526996"/><text x="176" y="232" text-anchor="middle" class="tiny">RLD</text>
+    <circle cx="286" cy="226" r="36" fill="#121726" stroke="#40E6FF"/><text x="286" y="232" text-anchor="middle" class="tiny">DASH</text>
+  </g>
+</svg>

@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="980" viewBox="0 0 1440 980">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#06080E"/><stop offset="1" stop-color="#121726"/></linearGradient><style>.title{font:700 28px Arial;fill:#F5F8FF;letter-spacing:1px}.h2{font:700 17px Arial;fill:#F5F8FF;letter-spacing:.7px}.label{font:700 13px Arial;fill:#F5F8FF;letter-spacing:.4px}.body{font:500 12px Arial;fill:#9EACC6}.tiny{font:700 10px Arial;fill:#9EACC6;letter-spacing:.5px}.panel{fill:#121726;stroke:#526996;stroke-opacity:.74;stroke-width:1.5}</style></defs>
+  <rect width="1440" height="980" fill="url(#bg)"/>
+  <text x="64" y="66" class="title">05 HANDOFF / FIGMA TO ROBLOX</text>
+  <text x="64" y="94" class="body">Implementation starts only after mockup approval. Keep server authority and RemoteEvents unchanged.</text>
+  <g transform="translate(64 138)">
+    <rect width="828" height="764" rx="20" class="panel"/>
+    <text x="28" y="44" class="h2">COMPONENT MAP</text>
+    <g transform="translate(28 78)">
+      <text class="tiny" fill="#40E6FF">FIGMA COMPONENT</text><text x="344" class="tiny" fill="#40E6FF">ROBLOX TARGET</text>
+      <line y1="18" x2="772" y2="18" stroke="#526996"/>
+      <text y="54" class="label">Panel / Glass</text><text x="344" y="54" class="body">Extend UITheme.stylePanel</text>
+      <text y="96" class="label">Button / Action</text><text x="344" y="96" class="body">Extend UITheme.styleButton</text>
+      <text y="138" class="label">Chip / Ability</text><text x="344" y="138" class="body">New HUD shared chip constructor</text>
+      <text y="180" class="label">Card / ShopItem</text><text x="344" y="180" class="body">Extract EconomyController card helper</text>
+      <text y="222" class="label">Card / Reward</text><text x="344" y="222" class="body">Extract daily and season reward helpers</text>
+      <text y="264" class="label">Tab / Nav</text><text x="344" y="264" class="body">Extract Shop, Season, Profile tab helper</text>
+      <text y="306" class="label">Progress / Bar</text><text x="344" y="306" class="body">Shared health, XP, contract, cooldown helper</text>
+      <text y="348" class="label">Notification / Toast</text><text x="344" y="348" class="body">Match contract and medal overlays</text>
+      <text y="390" class="label">Row / Scoreboard</text><text x="344" y="390" class="body">Extract HUD scoreboard row builder</text>
+      <text y="432" class="label">Touch / Action</text><text x="344" y="432" class="body">New mobile action button helper</text>
+    </g>
+    <rect x="28" y="566" width="772" height="164" rx="16" fill="#0B0E18" stroke="#9A65FF"/>
+    <text x="48" y="598" class="tiny" fill="#9A65FF">RESPONSIVE RULE</text><text x="48" y="630" class="label">DESKTOP</text><text x="170" y="630" class="body">Health left / chips below crosshair / ammo right</text><text x="48" y="664" class="label">MOBILE</text><text x="170" y="664" class="body">Native joystick / action cluster right / stacked scroll sheets</text><text x="48" y="698" class="label">SAFE AREA</text><text x="170" y="698" class="body">24px desktop / 16px mobile / 44px minimum touch target</text>
+  </g>
+  <g transform="translate(924 138)">
+    <rect width="452" height="368" rx="20" class="panel"/>
+    <text x="28" y="44" class="h2">CLIENT ACTION ROUTER</text>
+    <text x="28" y="82" class="tiny" fill="#40E6FF">API</text><text x="28" y="108" class="body">bind(actionName, handler)</text><text x="28" y="132" class="body">dispatch(actionName, source)</text><text x="28" y="156" class="body">setState(actionName, state)</text>
+    <text x="28" y="202" class="tiny" fill="#FFD854">ACTIONS</text><text x="28" y="230" class="body">jump / dash / slide / grapple</text><text x="28" y="254" class="body">fire / reload / parry</text><text x="28" y="278" class="body">toggleShop / toggleScoreboard</text>
+    <text x="28" y="326" class="tiny">KEEP ROBLOX NATIVE JOYSTICK + CAMERA</text>
+  </g>
+  <g transform="translate(924 536)">
+    <rect width="452" height="366" rx="20" class="panel"/>
+    <text x="28" y="44" class="h2">APPROVAL CHECKLIST</text>
+    <text x="28" y="92" class="label" fill="#70FF97">01  CONTRAST + HIERARCHY REVIEWED</text>
+    <text x="28" y="132" class="label" fill="#70FF97">02  TOUCH TARGETS AT LEAST 44PX</text>
+    <text x="28" y="172" class="label" fill="#70FF97">03  EN + ES REPRESENTATIVE COPY FITS</text>
+    <text x="28" y="212" class="label" fill="#70FF97">04  CROSSHAIR AREA STAYS QUIET</text>
+    <text x="28" y="252" class="label" fill="#FFD854">05  APPROVE FIGMA BEFORE LUAU EDITS</text>
+    <text x="28" y="308" class="tiny">AFTER APPROVAL: STUDIO DESKTOP + MOBILE EMULATION</text>
+  </g>
+</svg>

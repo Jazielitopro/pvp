@@ -7,6 +7,7 @@
 
 local Workspace          = game:GetService("Workspace")
 local ProjectileRegistry = require(script.Parent.ProjectileRegistry)
+local EconomyService     = require(script.Parent.EconomyService)
 local WeaponConstants    = require(game.ReplicatedStorage.Shared.Constants.WeaponConstants)
 
 local remotes          = game.ReplicatedStorage:WaitForChild("Remotes")
@@ -18,8 +19,22 @@ local ProjectileSpawner = {}
 -- Rejects zero vectors or wildly un-normalised submissions.
 local function validateDirection(dir)
 	if typeof(dir) ~= "Vector3" then return false end
+	if dir.X ~= dir.X or dir.Y ~= dir.Y or dir.Z ~= dir.Z then return false end
 	local mag = dir.Magnitude
 	return mag > 0.8 and mag < 1.2  -- allow small floating-point drift
+end
+
+local function isDirectionPlausible(character, direction)
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if not root then return false end
+
+	local aimFlat = Vector3.new(direction.X, 0, direction.Z)
+	local rootFlat = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z)
+	if aimFlat.Magnitude < 0.05 or rootFlat.Magnitude < 0.05 then
+		return true
+	end
+
+	return aimFlat.Unit:Dot(rootFlat.Unit) > 0.25
 end
 
 -- Called by WeaponSystem.onFire after ammo has been consumed.
@@ -27,19 +42,26 @@ function ProjectileSpawner.onFire(player, direction)
 	if not validateDirection(direction) then
 		warn(string.format("[Spawner] %s sent invalid direction (mag=%.3f) — ignored",
 			player.Name, typeof(direction) == "Vector3" and direction.Magnitude or -1))
-		return
+		return false
 	end
 
 	local character = player.Character
 	if not character then
 		warn(string.format("[Spawner] %s has no character — fire ignored", player.Name))
-		return
+		return false
 	end
 
 	local head = character:FindFirstChild("Head")
 	if not head then
 		warn(string.format("[Spawner] %s character has no Head — fire ignored", player.Name))
-		return
+		return false
+	end
+
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+
+	if not isDirectionPlausible(character, direction) then
+		warn(string.format("[Spawner] %s sent implausible fire direction — ignored", player.Name))
+		return false
 	end
 
 	-- Spawn origin: just in front of the head (no weapon model yet).
@@ -57,6 +79,11 @@ function ProjectileSpawner.onFire(player, direction)
 		owner        = player,
 		position     = origin,
 		velocity     = velocity,
+		projectileSkin = EconomyService.getEquippedCosmetic(player, "projectileSkin"),
+		damage       = WeaponConstants.DAMAGE_PER_HIT,
+		reflectCount = 0,
+		boosted      = false,
+		airborneShot = humanoid and humanoid.FloorMaterial == Enum.Material.Air,
 		spawnTime    = os.clock(),
 		filterParams = params,
 	})
@@ -66,7 +93,16 @@ function ProjectileSpawner.onFire(player, direction)
 		direction.Unit.X, direction.Unit.Y, direction.Unit.Z))
 
 	-- Tell every client: create a visual bullet
-	spawnProjectile:FireAllClients(id, player.UserId, origin, direction.Unit, WeaponConstants.BULLET_SPEED)
+	local projectile = ProjectileRegistry.get(id)
+	spawnProjectile:FireAllClients(
+		id,
+		player.UserId,
+		origin,
+		direction.Unit,
+		WeaponConstants.BULLET_SPEED,
+		projectile.projectileSkin
+	)
+	return true
 end
 
 return ProjectileSpawner

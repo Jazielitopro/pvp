@@ -22,11 +22,18 @@ local remotes       = game.ReplicatedStorage:WaitForChild("Remotes")
 local fireRequest   = remotes:WaitForChild("FireRequest")
 local reloadRequest = remotes:WaitForChild("ReloadRequest")
 local ammoUpdated   = remotes:WaitForChild("AmmoUpdated")
+local ammoStateRequested = remotes:WaitForChild("AmmoStateRequested")
 
 local WeaponConstants = require(game.ReplicatedStorage.Shared.Constants.WeaponConstants)
 local SoundManager    = require(game.ReplicatedStorage.Client.SoundManager)
 local ScreenEffects   = require(game.ReplicatedStorage.Client.ScreenEffects)
 local HUD             = require(game.ReplicatedStorage.Client.HUD)
+local ClientActionGate = require(game.ReplicatedStorage.Client.ClientActionGate)
+
+if not ClientActionGate.startSingleton("WeaponController") then
+	print("[WeaponController] Duplicate controller ignored")
+	return
+end
 
 -- ── Startup diagnostics ───────────────────────────────────────────────────────
 
@@ -92,9 +99,15 @@ UserInputService.InputBegan:Connect(function(input, processed)
 
 		if currentAmmo <= 0 then
 			-- Empty mag: auto-trigger reload instead of firing
-			reloadRequest:FireServer()
+			local canReload = ClientActionGate.try("weapon.reload", WeaponConstants.RELOAD_TIME)
+			if canReload then
+				reloadRequest:FireServer()
+			end
 			return
 		end
+
+		local canFire = ClientActionGate.try("weapon.fire", WeaponConstants.FIRE_COOLDOWN)
+		if not canFire then return end
 
 		-- Send the exact camera look direction so the server can spawn the projectile.
 		local direction = Workspace.CurrentCamera.CFrame.LookVector
@@ -110,6 +123,8 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	if input.KeyCode == Enum.KeyCode.R then
 		if isReloading then return end
 		if currentAmmo >= WeaponConstants.MAX_AMMO then return end
+		local canReload = ClientActionGate.try("weapon.reload", WeaponConstants.RELOAD_TIME)
+		if not canReload then return end
 		reloadRequest:FireServer()
 	end
 end)
@@ -119,6 +134,9 @@ end)
 ammoUpdated.OnClientEvent:Connect(function(ammo, reloading)
 	currentAmmo = ammo
 	isReloading = reloading
+	if not reloading then
+		ClientActionGate.clear("weapon.reload")
+	end
 	print(string.format("[WeaponController] Ammo update → %d / %d%s",
 		ammo, WeaponConstants.MAX_AMMO, reloading and " (RELOADING)" or ""))
 	if HUD.setAmmo then
@@ -127,3 +145,5 @@ ammoUpdated.OnClientEvent:Connect(function(ammo, reloading)
 		warn("[WeaponController] HUD.setAmmo still nil — HUD module not loaded")
 	end
 end)
+
+ammoStateRequested:FireServer()

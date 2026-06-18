@@ -15,6 +15,8 @@
 
 local Players   = game:GetService("Players")
 local Constants = require(game.ReplicatedStorage.Shared.Constants.GrappleConstants)
+local CosmeticState = require(game.ReplicatedStorage.Client.CosmeticState)
+local ClientActionGate = require(game.ReplicatedStorage.Client.ClientActionGate)
 
 local player = Players.LocalPlayer
 
@@ -48,6 +50,11 @@ function GrappleHandler.new(rootPart)
 		_currentVel     = Vector3.zero, -- tracked internally; not read from part
 		_cooldownUntil  = 0,
 		_remote         = nil,
+		_resultRemote   = nil,
+		_endRemote      = nil,
+		_resultConnection = nil,
+		_pending        = false,
+		_requestId      = 0,
 		_startTime      = 0,
 	}, GrappleHandler)
 
@@ -63,9 +70,44 @@ function GrappleHandler:setRemote(remote)
 	self._remote = remote
 end
 
+function GrappleHandler:setResultRemote(remote)
+	if self._resultConnection then
+		self._resultConnection:Disconnect()
+		self._resultConnection = nil
+	end
+
+	self._resultRemote = remote
+	self._resultConnection = remote.OnClientEvent:Connect(function(requestId, accepted, attachPoint, reason)
+		if requestId ~= self._requestId then
+			return
+		end
+
+		self._pending = false
+
+		if not accepted then
+			print(string.format("[Grapple] Server rejected grapple — %s", reason or "unknown"))
+			ClientActionGate.clear("movement.grapple.request")
+			return
+		end
+
+		if typeof(attachPoint) ~= "Vector3" then
+			print("[Grapple] Server accepted grapple without a valid attach point")
+			ClientActionGate.clear("movement.grapple.request")
+			return
+		end
+
+		self:_beginGrapple(attachPoint)
+	end)
+end
+
+function GrappleHandler:setEndRemote(remote)
+	self._endRemote = remote
+end
+
 -- ── Beam visual ───────────────────────────────────────────────────────────────
 
 function GrappleHandler:_createBeam(attachPoint)
+	local primaryColor, secondaryColor = CosmeticState.getColors("hookTrail")
 	local hook           = Instance.new("Part")
 	hook.Name            = "GrappleHook"
 	hook.Anchored        = true
@@ -74,7 +116,7 @@ function GrappleHandler:_createBeam(attachPoint)
 	hook.Size            = Vector3.new(0.22, 0.22, 0.22)
 	hook.Shape           = Enum.PartType.Ball
 	hook.Material        = Enum.Material.Neon
-	hook.Color           = Color3.fromRGB(220, 175, 55)
+	hook.Color           = primaryColor
 	hook.Position        = attachPoint
 	hook.Parent          = workspace
 
@@ -86,9 +128,9 @@ function GrappleHandler:_createBeam(attachPoint)
 	beam.Attachment1        = hookAtt
 	beam.Width0             = 0.07
 	beam.Width1             = 0.04
-	beam.Color              = ColorSequence.new(Color3.fromRGB(190, 190, 190))
-	beam.Transparency       = NumberSequence.new(0.15)
-	beam.LightEmission      = 0
+	beam.Color              = ColorSequence.new(primaryColor, secondaryColor)
+	beam.Transparency       = NumberSequence.new(0.1)
+	beam.LightEmission      = 0.35
 	beam.CurveSize0         = 0
 	beam.CurveSize1         = 0
 	beam.FaceCamera         = false
@@ -136,6 +178,25 @@ local function makeParams(character)
 	return p
 end
 
+function GrappleHandler:_beginGrapple(attachPoint)
+	if not self._rootPart or not self._rootPart.Parent then
+		return
+	end
+
+	self._attachPoint = attachPoint
+	self._grappling   = true
+	self._startTime   = os.clock()
+	-- Seed internal velocity from current part velocity so the pull feels continuous.
+	self._currentVel  = self._rootPart.AssemblyLinearVelocity
+
+	print(string.format("[Grapple] Server accepted attach at (%.1f,%.1f,%.1f) — dist=%.1f",
+		attachPoint.X, attachPoint.Y, attachPoint.Z,
+		(attachPoint - self._rootPart.Position).Magnitude))
+
+	self:_createBeam(attachPoint)
+	self:_createLinearVelocity()
+end
+
 function GrappleHandler:tryGrapple(character, camera)
 	-- Toggle off
 	if self._grappling then
@@ -144,9 +205,20 @@ function GrappleHandler:tryGrapple(character, camera)
 		return
 	end
 
+	if self._pending then
+		print("[Grapple] Request already pending")
+		return
+	end
+
 	local now = os.clock()
 	if now < self._cooldownUntil then
 		print(string.format("[Grapple] On cooldown (%.2fs remaining)", self._cooldownUntil - now))
+		return
+	end
+
+	local canRequest = ClientActionGate.try("movement.grapple.request", 0.18)
+	if not canRequest then
+		print("[Grapple] Duplicate grapple request ignored")
 		return
 	end
 
@@ -162,27 +234,39 @@ function GrappleHandler:tryGrapple(character, camera)
 		return
 	end
 
-	self._attachPoint = result.Position
-	self._grappling   = true
-	self._startTime   = now
-	-- Seed internal velocity from current part velocity so the pull feels continuous
-	self._currentVel  = self._rootPart.AssemblyLinearVelocity
-
-	print(string.format("[Grapple] Attached to '%s' at (%.1f,%.1f,%.1f) — dist=%.1f",
+	print(string.format("[Grapple] Requesting attach to '%s' at (%.1f,%.1f,%.1f) — dist=%.1f",
 		result.Instance.Name,
 		result.Position.X, result.Position.Y, result.Position.Z,
 		(result.Position - self._rootPart.Position).Magnitude))
 
-	self:_createBeam(result.Position)
-	self:_createLinearVelocity()
-
-	if self._remote then
-		self._remote:FireServer(result.Position)
+	if not self._remote or not self._resultRemote then
+		print("[Grapple] Remote handshake unavailable — request cancelled")
+		ClientActionGate.clear("movement.grapple.request")
+		return
 	end
+
+	self._pending = true
+	self._requestId += 1
+	self._remote:FireServer(self._requestId, origin, dir, result.Position)
+	local requestId = self._requestId
+	task.delay(1.0, function()
+		if self._pending and self._requestId == requestId then
+			self._pending = false
+			ClientActionGate.clear("movement.grapple.request")
+			print("[Grapple] Server response timed out")
+		end
+	end)
+	return
 end
 
 function GrappleHandler:cancel(reason)
+	if self._pending then
+		self._pending = false
+		ClientActionGate.clear("movement.grapple.request")
+		return
+	end
 	if not self._grappling then return end
+	local exitVelocity = self._currentVel
 	self._grappling     = false
 	self._attachPoint   = nil
 	self._cooldownUntil = os.clock() + Constants.COOLDOWN
@@ -190,6 +274,25 @@ function GrappleHandler:cancel(reason)
 	print(string.format("[Grapple] Detached — reason: %s", reason or "unknown"))
 	self:_destroyBeam()
 	self:_destroyLinearVelocity()
+
+	local horizontal = Vector3.new(exitVelocity.X, 0, exitVelocity.Z)
+	local didSlingshot = false
+	if horizontal.Magnitude >= Constants.SLINGSHOT_MIN_SPEED and self._rootPart then
+		local boostedHorizontal = horizontal.Unit * math.min(
+			horizontal.Magnitude * Constants.SLINGSHOT_MULT,
+			Constants.SLINGSHOT_MAX_SPEED
+		)
+		self._rootPart.AssemblyLinearVelocity = Vector3.new(
+			boostedHorizontal.X,
+			math.max(exitVelocity.Y, self._rootPart.AssemblyLinearVelocity.Y),
+			boostedHorizontal.Z
+		)
+		didSlingshot = true
+		print(string.format("[Grapple] Slingshot launch — %.1f studs/s", boostedHorizontal.Magnitude))
+	end
+	if self._endRemote then
+		self._endRemote:FireServer(didSlingshot)
+	end
 end
 
 -- ── Tick (called every Heartbeat while grappling) ─────────────────────────────
@@ -237,6 +340,10 @@ end
 
 function GrappleHandler:destroy()
 	self:cancel()
+	if self._resultConnection then
+		self._resultConnection:Disconnect()
+		self._resultConnection = nil
+	end
 	if self._handAtt then
 		self._handAtt:Destroy()
 		self._handAtt = nil

@@ -17,6 +17,12 @@ local GrappleHandler   = require(script.GrappleHandler)
 local CameraController = require(script.CameraController)
 local AnimationHandler = require(script.AnimationHandler)
 local Constants        = require(game.ReplicatedStorage.Shared.Constants.MovementConstants)
+local ClientActionGate = require(game.ReplicatedStorage.Client.ClientActionGate)
+
+if not ClientActionGate.startSingleton("CharacterController") then
+	print("[CharacterController] Duplicate controller ignored")
+	return
+end
 
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
@@ -151,6 +157,20 @@ local function setupCharacter(character)
 			print("[CharacterController] GrappleRequest remote connected for", player.Name)
 		elseif not gr then
 			warn("[CharacterController] GrappleRequest not found after 10s")
+		end
+		local gres = remotes:WaitForChild("GrappleResult", 10)
+		if gres and grappleHandler then
+			grappleHandler:setResultRemote(gres)
+			print("[CharacterController] GrappleResult remote connected for", player.Name)
+		elseif not gres then
+			warn("[CharacterController] GrappleResult not found after 10s")
+		end
+		local ge = remotes:WaitForChild("GrappleEnded", 10)
+		if ge and grappleHandler then
+			grappleHandler:setEndRemote(ge)
+			print("[CharacterController] GrappleEnded remote connected for", player.Name)
+		elseif not ge then
+			warn("[CharacterController] GrappleEnded not found after 10s")
 		end
 	end)
 
